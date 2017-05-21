@@ -40,7 +40,7 @@ void SettingMode(){
 int main(void) {
 //---------------------------------------------------------------------------------
 	int count;
-	int moji, moji_old;
+	int note;
 	int offset;
 	int ab;
 	int key;
@@ -56,7 +56,8 @@ int main(void) {
 
 	// Init private
 	count 		= 0;
-	offset		= 8;
+	note		= 0;
+	offset		= 7;
 	key 		= 0;
 	ab 			= 0;
 	ab_sounding = 0;
@@ -89,37 +90,41 @@ int main(void) {
 			key = halKeyCtr12(&b);
 
 		if (halIsKey(&b))
-			moji = halKey8(&b) * 2;
-
-		
+			note = 16 - (halKey8(&b) * 2);
 		
 		// 入力
 		if (halIsAxB(&b) & (PUSH_AI | PUSH_BI)) {
 			ab = (keysHeld() & KEY_B) ? 0 : 1;
-			int mojiofs = (16 - moji) + offset + key + ab;
+			int note_total = note + offset + key + ab;
+			// どのボタンで鳴らしているかを記憶しておく。
 			ab_sounding = (halIsA(&b)) ? 0x10 : 0x20;
 			env_time = 0;
 
 			// sound test
 			REG_SOUND1CNT_L = 0x0000;
 			REG_SOUND1CNT_H = 0xF000;
-			REG_SOUND1CNT_X = 0x8000 | freq_tbl[mojiofs];
+			REG_SOUND1CNT_X = 0x8000 | freq_tbl[note_total];
 			
 			// 表示
-			iprintf("%04X : %04X \n ", count, mojiofs);
+			iprintf("%04X : %04X \n ", count, note_total);
 			iprintf("ab_s : %04X \n ", ab_sounding);
 			count++;
+		}
+
+		// クロス打ち
+		if (halIsAxB(&b) & (PUSH_AX | PUSH_BX)) {
+
 		}
 
 		// キーオフ
 		if (halIsAB_rrse(&b) & ab_sounding){
 			env_time = env_time_set;
 			REG_SOUND1CNT_H = 0xF000 | ((env_time & 7) << 8);
-			iprintf("test : rrse \n ", count);
+			iprintf("REREASE \n ");
 		}
 
 		if (halIsAxB(&b))
-			iprintf("yes %d \n ",halIsAxB(&b) );
+			iprintf("PUSH_INFO : %d \n ",halIsAxB(&b) );
 		VBlankIntrWait();
 	}
 }
