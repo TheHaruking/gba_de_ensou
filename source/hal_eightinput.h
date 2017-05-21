@@ -6,6 +6,12 @@
 extern "C" {
 #endif
 //---------------------------------------------------------------------------------
+#define PUSH_AI		0x01
+#define PUSH_BI		0x02
+#define PUSH_AX		0x04
+#define PUSH_BX		0x08
+
+
 typedef struct _BUTTON_INFO_ {
 	// 初期設定
 	unsigned int x0, x1, y0, y1, a, b, ctr, esc; // sortinfo
@@ -13,6 +19,7 @@ typedef struct _BUTTON_INFO_ {
 	unsigned int b0;				// new (押している間)
 	unsigned int b1, b2;			// 押したとき、離したとき
 	unsigned int b_old;				// old
+	unsigned int ab;
 	// 方向関連
 	unsigned int k0, k1, k2, k_old;	// 方向キー単体の情報
 	int			 key_8;				// ↑を 0 とした 7 までの 角度。
@@ -41,6 +48,9 @@ extern int  halKey8(BUTTON_INFO* btn);
 extern int  halIsA(BUTTON_INFO* btn);
 extern int  halIsB(BUTTON_INFO* btn);
 extern int  halIsAB(BUTTON_INFO* btn);
+extern int  halIsAB_rrse(BUTTON_INFO* btn);
+extern int  halIsAxB(BUTTON_INFO* btn);
+
 extern int  halIsKey(BUTTON_INFO* btn);
 
 #endif

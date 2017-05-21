@@ -44,6 +44,9 @@ int main(void) {
 	int offset;
 	int ab;
 	int key;
+	int ab_sounding;
+	int env_time;
+	int env_time_set;
 	BUTTON_INFO b;
 
 	// Init
@@ -52,10 +55,13 @@ int main(void) {
 	consoleDemoInit();
 
 	// Init private
-	count = 0;
-	offset = 8;
-	key = 0;
-	ab = 0;
+	count 		= 0;
+	offset		= 8;
+	key 		= 0;
+	ab 			= 0;
+	ab_sounding = 0;
+	env_time 	= 0;
+	env_time_set = 2;	// 余韻の長さ
 	halSetKeysSort(&b, 4, 5, 6, 7, 0, 1, 3, 2);
 
 	// Sound Init
@@ -78,30 +84,42 @@ int main(void) {
 			case 2: offset -= 12; break; 			
 		}
 
-		// key + Ctr
+		// キー を 12通りに変更
 		if (halKeyCtr12(&b) >= 0)
 			key = halKeyCtr12(&b);
 
 		if (halIsKey(&b))
 			moji = halKey8(&b) * 2;
 
-		ab = (keysHeld() & KEY_B) ? 0 : 1;
+		
 		
 		// 入力
-		if( halIsAB(&b)) {
+		if (halIsAxB(&b) & (PUSH_AI | PUSH_BI)) {
+			ab = (keysHeld() & KEY_B) ? 0 : 1;
 			int mojiofs = (16 - moji) + offset + key + ab;
-
-			// 表示
-			iprintf("%04X : %04X \n ", count, mojiofs);
+			ab_sounding = (halIsA(&b)) ? 0x10 : 0x20;
+			env_time = 0;
 
 			// sound test
 			REG_SOUND1CNT_L = 0x0000;
 			REG_SOUND1CNT_H = 0xF000;
 			REG_SOUND1CNT_X = 0x8000 | freq_tbl[mojiofs];
 			
+			// 表示
+			iprintf("%04X : %04X \n ", count, mojiofs);
+			iprintf("ab_s : %04X \n ", ab_sounding);
 			count++;
 		}
 
+		// キーオフ
+		if (halIsAB_rrse(&b) & ab_sounding){
+			env_time = env_time_set;
+			REG_SOUND1CNT_H = 0xF000 | ((env_time & 7) << 8);
+			iprintf("test : rrse \n ", count);
+		}
+
+		if (halIsAxB(&b))
+			iprintf("yes %d \n ",halIsAxB(&b) );
 		VBlankIntrWait();
 	}
 }

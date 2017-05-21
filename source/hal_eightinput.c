@@ -22,8 +22,6 @@
 #define KEY_XY		0x0F
 #define BTN_AB		0x30
 
-#define PUSH_I
-#define PUSH_X
 #define PUSH_HOLD
 #define PUSH_SHIFT
 #define PUSH_DOUBLE
@@ -76,7 +74,7 @@ void halSetKeysSort(BUTTON_INFO* btn, unsigned int x0, unsigned int x1, unsigned
 }
 
 
-/* ボタンビットを、共通化する。
+/* ボタンビットを共通化する。
  * x0, x1, y0, ... には、src の 何番目ビット を 目的のボタンに当てるか指定されている。
  */
 void halSetKeys(BUTTON_INFO* btn, int src){
@@ -92,6 +90,8 @@ void halSetKeys(BUTTON_INFO* btn, int src){
 			  ) & 0xFF;
 	btn->b1 = (btn->b0 ^ btn->b_old) & btn->b0;
 	btn->b2 = (btn->b0 ^ btn->b_old) & btn->b_old;
+	// ABの情報 (良く使うので)
+	btn->ab = btn->b0 & BTN_AB;
 
 	// 方向キー単体の情報取得
 	btn->k0 = btn->b0 & KEY_XY;
@@ -99,7 +99,7 @@ void halSetKeys(BUTTON_INFO* btn, int src){
 	btn->k2 = btn->b2 & KEY_XY;
 	btn->k_old = btn->b_old & KEY_XY;
 
-	// 方向のベクトル化(0 ~ 7, -1)
+	// 方向のベクトル化(0 ~ 7, -1)(よく使うので)
 	btn->key_8 = num_8_tbl[btn->k0];
  
 	// フラグリセット
@@ -156,14 +156,7 @@ int halKeyToNum(BUTTON_INFO* btn){
 }
 
 int halKeyAB(BUTTON_INFO* btn){
-	int ab  = btn->b1 & BTN_AB;
-	int key = btn->b0 & KEY_XY;
-	int direction_8 = num_8_tbl[key];
-	int ret;
-
-	ret = ret;
-
-	return ret;
+	return btn->ab & BTN_AB;
 }
 
 // Ctrホールド + 十字キー [押したとき]
@@ -204,7 +197,6 @@ int halKeyCtr8(BUTTON_INFO* btn){
 
 // 十字キー -> Ctr 押したとき
 int halKeyCtr12(BUTTON_INFO* btn){
-	int direction_8 = num_8_tbl[btn->k0];
 	int ret;
 
 	// Ctr押した瞬間でなければ -1
@@ -241,6 +233,32 @@ int halIsB(BUTTON_INFO* btn){
 
 int halIsAB(BUTTON_INFO* btn){
 	return btn->b1 & BTN_AB;
+}
+
+int halIsAB_rrse(BUTTON_INFO* btn){
+	return btn->b2 & BTN_AB;
+}
+
+int halIsAxB(BUTTON_INFO* btn){
+	int ab_push = btn->b1 & BTN_AB;
+	int ab_hold = btn->ab ^ ab_push;
+	int a_p = ((ab_push & BTN_A) > 0) << 0;
+	int b_p = ((ab_push & BTN_B) > 0) << 1;
+	int a_h = ((ab_hold & BTN_A) > 0) << 2;
+	int b_h = ((ab_hold & BTN_B) > 0) << 3;
+
+	switch (a_p | b_p | a_h | b_h) {
+		case 1: // iA
+			return PUSH_AI;
+		case 2: // iB
+			return PUSH_BI;
+		case 9: // xA
+			return PUSH_AX;
+		case 6: // xB
+			return PUSH_BX;
+		default:
+			return 0;
+	}
 }
 
 int test( BUTTON_INFO* btn ){
