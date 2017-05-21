@@ -5,8 +5,6 @@
 
 #include "hal_eightinput.h"
 
-
-
 const unsigned short freq_tbl[84] = {
 	0x0000, 0x0073, 0x00DF, 0x0146, 
 	0x01A7, 0x0202, 0x0258, 0x02A9, 
@@ -31,7 +29,10 @@ const unsigned short freq_tbl[84] = {
 	0x07EC, 0x07ED, 0x07EE, 0x07EF, 
 };
 
+// 設定モード
+void SettingMode(){
 
+}
 
 //---------------------------------------------------------------------------------
 // Program entry point
@@ -39,8 +40,10 @@ const unsigned short freq_tbl[84] = {
 int main(void) {
 //---------------------------------------------------------------------------------
 	int count;
-	int moji;
+	int moji, moji_old;
 	int offset;
+	int ab;
+	int key;
 	BUTTON_INFO b;
 
 	// Init
@@ -50,7 +53,9 @@ int main(void) {
 
 	// Init private
 	count = 0;
-	offset = 60;
+	offset = 8;
+	key = 0;
+	ab = 0;
 	halSetKeysSort(&b, 4, 5, 6, 7, 0, 1, 3, 2);
 
 	// Sound Init
@@ -65,28 +70,29 @@ int main(void) {
 	while (1) {
 		scanKeys();
 		halSetKeys(&b, keysHeld());
-		switch(keysDown() & (KEY_L | KEY_R)){
-			case KEY_L: offset--; break;
-			case KEY_R: offset++; break;
-		}
-
+		// Ctr + key
 		switch(halKeyCtr4(&b)) {
-			case 1: offset += 12; break;
-			case 3: offset -= 12; break;			
+			case 1: offset++; break;
+			case 3: offset--; break;
+			case 0: offset += 12; break;
+			case 2: offset -= 12; break; 			
 		}
-		if (halKeyCtr4(&b) >= 0)
-			iprintf("test : %04X \n ", test(&b));
 
-		// ansi escape sequence to set print co-ordinates
-		// /x1b[line;columnH
-		moji = halKeyToNum(&b);
+		// key + Ctr
+		if (halKeyCtr12(&b) >= 0)
+			key = halKeyCtr12(&b);
+
+		if (halIsKey(&b))
+			moji = halKey8(&b) * 2;
+
+		ab = (keysHeld() & KEY_B) ? 0 : 1;
 		
 		// 入力
-		if( moji >= 0 ) {
-			int mojiofs = (16 - moji) + offset;
+		if( halIsAB(&b)) {
+			int mojiofs = (16 - moji) + offset + key + ab;
 
 			// 表示
-			iprintf("%04X : %04X , [%d(%04X)]\n ", count, moji, mojiofs, freq_tbl[mojiofs]);
+			iprintf("%04X : %04X \n ", count, mojiofs);
 
 			// sound test
 			REG_SOUND1CNT_L = 0x0000;
@@ -94,11 +100,6 @@ int main(void) {
 			REG_SOUND1CNT_X = 0x8000 | freq_tbl[mojiofs];
 			
 			count++;
-		}
-
-		// test
-		if (1) {//test(&b)){
-			iprintf("test : %04X , %d\n ", test(&b), b.f_key);
 		}
 
 		VBlankIntrWait();

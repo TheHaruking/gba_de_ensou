@@ -99,7 +99,7 @@ void halSetKeys(BUTTON_INFO* btn, int src){
 	btn->k2 = btn->b2 & KEY_XY;
 	btn->k_old = btn->b_old & KEY_XY;
 
-	// 方向のベクトル化(0 ~ 7)
+	// 方向のベクトル化(0 ~ 7, -1)
 	btn->key_8 = num_8_tbl[btn->k0];
  
 	// フラグリセット
@@ -202,46 +202,48 @@ int halKeyCtr8(BUTTON_INFO* btn){
 	return ret;
 }
 
-// Ctrホールド + 十字キー -> 十字キー離したとき
+// 十字キー -> Ctr 押したとき
 int halKeyCtr12(BUTTON_INFO* btn){
 	int direction_8 = num_8_tbl[btn->k0];
 	int ret;
 
-	// stage 0
-	if (btn->k12_stage == 0) {
-		if (btn->f_key_flag) { 
-			btn->k12_stage = 1;
-		}
-	}
-	// stage 1
-	if (btn->k12_stage == 1) {
-		int direction_4_8 = num_4_8_tbl[btn->f_key][direction_8];
-		if      (btn->f_key != direction_4_8 ){
-			btn->k12_stage == 2;
-		}
-		else if (!btn->k0) {
-			btn->k12_stage == 3;
-		}
-	}
-	// stage 2
-	if( btn->k12_stage == 2){
-		int direction_4_8 = num_4_8_tbl[btn->f_key][direction_8];
-		if      ( btn->f_key < direction_4_8 ){
-			ret = 1;
-		}
-		else if ( btn->f_key > direction_4_8 ){
-			ret = -1;
-		}
-		btn->k12_stage = 0;
-	}
-	// stage 3
-	if( btn->k12_stage == 3){
-		ret = 0;
-		btn->k12_stage = 0;
-	}
+	// Ctr押した瞬間でなければ -1
+	if (!(btn->b1 & BTN_CTR))
+		return -1;
+
+	// 1 2 3 に 
+	int num_3;
+	num_3 = btn->f_key_move - CENTER_NUM;
+	if     (num_3 <  0)  num_3 = 0;
+	else if(num_3 >  0)  num_3 = 2;
+	else /* num_3 == 0 */num_3 = 1;
+
+	// 0 ~ 11 に
+	ret = (btn->f_key * 3) + num_3;
 	return ret;
+}
+
+int halKey8(BUTTON_INFO* btn){
+	return btn->key_8; 
+}
+
+int halIsKey(BUTTON_INFO* btn){
+	return (btn->k1 | btn->k2) && btn->k0;
+}
+
+int halIsA(BUTTON_INFO* btn){
+	return (btn->b1 & BTN_A) > 0;
+}
+
+int halIsB(BUTTON_INFO* btn){
+	return (btn->b1 & BTN_B) > 0;
+}
+
+int halIsAB(BUTTON_INFO* btn){
+	return btn->b1 & BTN_AB;
 }
 
 int test( BUTTON_INFO* btn ){
 	return btn->f_key_move;
 }
+

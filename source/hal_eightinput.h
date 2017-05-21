@@ -32,8 +32,15 @@ extern void halSetKeysSort(BUTTON_INFO* btn, unsigned int x0, unsigned int x1, u
 extern void halSetKeys(BUTTON_INFO* btn, int src);
 // 1 ~ 16 の 数値を出力。
 extern int  halKeyToNum(BUTTON_INFO* btn);
-extern int  halKeyAB(BUTTON_INFO* b);
-extern int  halKeyCtr4(BUTTON_INFO* b);
-extern int  halKeyCtr8(BUTTON_INFO* b);
-extern int  halKeyCtr12(BUTTON_INFO* b);
+extern int  halKeyAB(BUTTON_INFO* btn);
+extern int  halKeyCtr4(BUTTON_INFO* btn);
+extern int  halKeyCtr8(BUTTON_INFO* btn);
+extern int  halKeyCtr12(BUTTON_INFO* btn);
+extern int  halKey8(BUTTON_INFO* btn);
+
+extern int  halIsA(BUTTON_INFO* btn);
+extern int  halIsB(BUTTON_INFO* btn);
+extern int  halIsAB(BUTTON_INFO* btn);
+extern int  halIsKey(BUTTON_INFO* btn);
+
 #endif
