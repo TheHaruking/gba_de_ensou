@@ -45,8 +45,10 @@ int main(void) {
 	int ab;
 	int key;
 	int ab_sounding;
-	int env_time;
-	int env_time_set;
+	int snd_duty;		// 0062_XX67 - duty 
+	int snd_time;		// 0062_89AX - snd_time
+	int snd_amp;		// 0062_XXXB - muki
+	int snd_vol;		// 0062_CDEF - init volume
 	BUTTON_INFO b;
 
 	// Init
@@ -57,12 +59,14 @@ int main(void) {
 	// Init private
 	count 		= 0;
 	note		= 0;
-	offset		= 7;
-	key 		= 0;
+	offset		= 22;
+	key 		= 4;
 	ab 			= 0;
 	ab_sounding = 0;
-	env_time 	= 0;
-	env_time_set = 2;	// 余韻の長さ
+	snd_duty	= 2;
+	snd_time 	= 2;	// 余韻の長さ
+	snd_amp		= 0;
+	snd_vol 	= 15;	// Attack volume
 	halSetKeysSort(&b, 4, 5, 6, 7, 0, 1, 3, 2);
 
 	// Sound Init
@@ -79,34 +83,46 @@ int main(void) {
 		halSetKeys(&b, keysHeld());
 		// Ctr + key
 		switch(halKeyCtr4(&b)) {
-			case 1: offset++; break;
-			case 3: offset--; break;
+			case 1: snd_duty = (snd_duty + 1) & 0x03; break;
+			case 3: snd_duty = (snd_duty - 1) & 0x03; break;
 			case 0: offset += 12; break;
 			case 2: offset -= 12; break; 			
 		}
 
-		// キー を 12通りに変更
+		// キー を 12通りに変更 (左回り)
 		if (halKeyCtr12(&b) >= 0)
-			key = halKeyCtr12(&b);
+			key = 11 - halKeyCtr12(&b);
 
 		if (halIsKey(&b))
 			note = 16 - (halKey8(&b) * 2);
 		
 		// 入力
 		if (halIsAxB(&b) & (PUSH_AI | PUSH_BI)) {
+			int swp_total;
+			int note_total;
+			int snd_total;
+
+			int snd_duty_fix = (snd_duty & 0x03) <<  6;
+			int snd_time_fix = 0; //(snd_time << 7)  & 0x07;
+			int snd_amp_fix  = (snd_amp  & 0x01) << 11;
+			int snd_vol_fix  = (snd_vol  & 0x0f) << 12;
+
+			// 音階決定
 			ab = (keysHeld() & KEY_B) ? 0 : 1;
-			int note_total = note + offset + key + ab;
+			note_total = 0x8000 | freq_tbl[note + offset + key + ab];
+			snd_total  = snd_duty_fix | snd_amp_fix | snd_time_fix | snd_vol_fix;
+			// Sweep は 使わない
+			swp_total  = 0x0000;
 			// どのボタンで鳴らしているかを記憶しておく。
 			ab_sounding = (halIsA(&b)) ? 0x10 : 0x20;
-			env_time = 0;
 
-			// sound test
-			REG_SOUND1CNT_L = 0x0000;
-			REG_SOUND1CNT_H = 0xF000;
-			REG_SOUND1CNT_X = 0x8000 | freq_tbl[note_total];
+			// Beep!
+			REG_SOUND1CNT_L = swp_total;
+			REG_SOUND1CNT_H = snd_total;
+			REG_SOUND1CNT_X = note_total;
 			
 			// 表示
-			iprintf("%04X : %04X \n ", count, note_total);
+			iprintf("[%04X] n;%04X, s:%04X\n", count, note_total, snd_total);
 			iprintf("ab_s : %04X \n ", ab_sounding);
 			count++;
 		}
@@ -118,8 +134,16 @@ int main(void) {
 
 		// キーオフ
 		if (halIsAB_rrse(&b) & ab_sounding){
-			env_time = env_time_set;
-			REG_SOUND1CNT_H = 0xF000 | ((env_time & 7) << 8);
+			int snd_total;
+
+			int snd_duty_fix = (snd_duty & 0x03) << 6;
+			int snd_time_fix = (snd_time & 0x07) << 8;
+			int snd_amp_fix  = (snd_amp  & 0x01) << 11;
+			int snd_vol_fix  = (snd_vol  & 0x0f) << 12;
+			snd_total = snd_duty_fix | snd_time_fix | snd_amp_fix | snd_vol_fix;
+
+			// 減衰
+			REG_SOUND1CNT_H = snd_total;
 			iprintf("REREASE \n ");
 		}
 
