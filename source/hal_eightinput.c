@@ -134,7 +134,7 @@ int halKeyToNum(BUTTON_INFO* btn){
 		return -1;
 
 	// 十字キー 変な方向(or 押していない)なら-1
-	if (!direction_8 < 0) 
+	if (!(direction_8 < 0)) 
 		return -1;
 
 	switch (ab){
@@ -188,7 +188,7 @@ int halKeyCtr8(BUTTON_INFO* btn){
 		return -1;
 	
 	// 十字キー 変な方向(or 押していない)なら-1
-	if (!direction_8 < 0)
+	if (!(direction_8 < 0))
 		return -1;
 
 	ret = direction_8;
@@ -233,6 +233,10 @@ int halIsB(BUTTON_INFO* btn){
 
 int halIsAB(BUTTON_INFO* btn){
 	return btn->b1 & BTN_AB;
+}
+
+int halIsAB_hold(BUTTON_INFO* btn){
+	return btn->b0 & BTN_AB;
 }
 
 int halIsAB_rrse(BUTTON_INFO* btn){

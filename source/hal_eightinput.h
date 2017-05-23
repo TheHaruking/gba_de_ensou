@@ -48,6 +48,7 @@ extern int  halKey8(BUTTON_INFO* btn);
 extern int  halIsA(BUTTON_INFO* btn);
 extern int  halIsB(BUTTON_INFO* btn);
 extern int  halIsAB(BUTTON_INFO* btn);
+extern int  halIsAB_hold(BUTTON_INFO* btn);
 extern int  halIsAB_rrse(BUTTON_INFO* btn);
 extern int  halIsAxB(BUTTON_INFO* btn);
 

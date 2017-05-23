@@ -117,7 +117,9 @@ int main(void) {
 		}
 		
 		// 入力
-		if (halIsAxB(&b) & (PUSH_AI | PUSH_BI)) {
+		if (   halIsAxB(&b) & (PUSH_AI | PUSH_BI)
+			||(halIsKey(&b) && halIsAB_hold(&b))  ) 
+		{
 			int swp_total;
 			int note_total;
 			int snd_total;
