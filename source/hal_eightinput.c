@@ -261,6 +261,10 @@ int halIsAxB(BUTTON_INFO* btn){
 	}
 }
 
+int halIsFirstKey( BUTTON_INFO* btn ){
+	 return btn->f_key;
+}
+
 int test( BUTTON_INFO* btn ){
 	return btn->f_key_move;
 }

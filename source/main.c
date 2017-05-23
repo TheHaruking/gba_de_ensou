@@ -45,6 +45,7 @@ int main(void) {
 	int ab;
 	int key;
 	int ab_sounding;
+	int high_flag;
 	int snd_duty;		// 0062_XX67 - duty 
 	int snd_time;		// 0062_89AX - snd_time
 	int snd_amp;		// 0062_XXXB - muki
@@ -63,6 +64,7 @@ int main(void) {
 	key 		= 4;
 	ab 			= 0;
 	ab_sounding = 0;
+	high_flag	= 0;
 	snd_duty	= 2;
 	snd_time 	= 2;	// 余韻の長さ
 	snd_amp		= 0;
@@ -90,11 +92,29 @@ int main(void) {
 		}
 
 		// キー を 12通りに変更 (左回り)
-		if (halKeyCtr12(&b) >= 0)
+		if (halKeyCtr12(&b) >= 0) {
 			key = 11 - halKeyCtr12(&b);
+		}
 
-		if (halIsKey(&b))
+		// ↖の音程を臨機応変に
+		switch (halKey8(&b)) {
+			case 0:
+			case 1:
+			case 2:
+				high_flag = 1; break;
+			case 4:
+			case 5:
+			case 6:
+				high_flag = 0; break;
+		}
+
+		// メロディ！
+		if (halIsKey(&b)) {
 			note = 16 - (halKey8(&b) * 2);
+			if(halKey8(&b) == 7) {
+				note += (high_flag) ? 16 : 0;
+			}
+		}
 		
 		// 入力
 		if (halIsAxB(&b) & (PUSH_AI | PUSH_BI)) {
@@ -103,7 +123,7 @@ int main(void) {
 			int snd_total;
 
 			int snd_duty_fix = (snd_duty & 0x03) <<  6;
-			int snd_time_fix = 0; //(snd_time << 7)  & 0x07;
+			int snd_time_fix = 0;		// (snd_time << 7)  & 0x07;
 			int snd_amp_fix  = (snd_amp  & 0x01) << 11;
 			int snd_vol_fix  = (snd_vol  & 0x0f) << 12;
 

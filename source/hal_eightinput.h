@@ -52,5 +52,6 @@ extern int  halIsAB_rrse(BUTTON_INFO* btn);
 extern int  halIsAxB(BUTTON_INFO* btn);
 
 extern int  halIsKey(BUTTON_INFO* btn);
+extern int  halIsFirstKey( BUTTON_INFO* btn );
 
 #endif
