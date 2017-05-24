@@ -55,4 +55,7 @@ extern int  halIsAxB(BUTTON_INFO* btn);
 extern int  halIsKey(BUTTON_INFO* btn);
 extern int  halIsFirstKey( BUTTON_INFO* btn );
 
+#ifdef __cplusplus
+	}	   // extern "C"
+#endif
 #endif
