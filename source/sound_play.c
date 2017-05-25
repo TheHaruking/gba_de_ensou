@@ -1,4 +1,5 @@
 #include <gba.h>
+#include <mappy.h>
 #include "sound_play.h"
 
 // 音程のデータ。(0000 : 最低音のド, 7オクターブ)
@@ -66,10 +67,7 @@ void SoundPlay(SOUND_PLAY* d, BUTTON_INFO* btn) {
 
 	// メロディ！
 	if (halIsKey(btn)) {
-		d->note = 16 - (halKey8(btn) * 2);
-		if(halKey8(btn) == 7) {
-			d->note += (d->high_flag) ? 16 : 0;
-		}
+
 	}
 
 	// 入力
@@ -86,8 +84,14 @@ void SoundPlay(SOUND_PLAY* d, BUTTON_INFO* btn) {
 		int snd_vol_fix  = (d->snd_vol  & 0x0f) << 12;
 
 		// 音階決定
-		d->ab = (keysHeld() & KEY_B) ? 0 : 1;
-		note_total = 0x8000 | freq_tbl[d->note + d->offset + d->key + d->ab];
+		d->note = 16 - (halKey8(btn) * 2);
+		d->ab   = (halIsB_hold(btn)) ? 0 : 1;
+		if(halKey8(btn) == 7) {
+			d->note += (d->high_flag) ? 16 : 0;
+		}
+		d->note += d->offset + d->key + d->ab;	
+
+		note_total = 0x8000 | freq_tbl[d->note];
 		snd_total  = snd_duty_fix | snd_amp_fix | snd_time_fix | snd_vol_fix;
 		// Sweep は 使わない
 		swp_total  = 0x0000;

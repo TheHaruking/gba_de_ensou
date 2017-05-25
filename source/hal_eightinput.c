@@ -9,19 +9,6 @@
  *     08   (ESC:80)  (CTR:40)
  */
 
-#define KEY_X0		0x01
-#define KEY_X1		0x02
-#define KEY_Y0		0x04
-#define KEY_Y1		0x08
-
-#define BTN_A		0x10
-#define BTN_B		0x20
-#define BTN_CTR		0x40
-#define BTN_ESC		0x80
-
-#define KEY_XY		0x0F
-#define BTN_AB		0x30
-
 #define PUSH_HOLD
 #define PUSH_SHIFT
 #define PUSH_DOUBLE
@@ -229,6 +216,10 @@ int halIsA(BUTTON_INFO* btn){
 
 int halIsB(BUTTON_INFO* btn){
 	return (btn->b1 & BTN_B) > 0;
+}
+
+int halIsB_hold(BUTTON_INFO* btn){
+	return (btn->b0 & BTN_B) > 0;
 }
 
 int halIsAB(BUTTON_INFO* btn){

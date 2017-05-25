@@ -6,11 +6,23 @@
 extern "C" {
 #endif
 //---------------------------------------------------------------------------------
+#define KEY_X0		0x01
+#define KEY_X1		0x02
+#define KEY_Y0		0x04
+#define KEY_Y1		0x08
+
+#define BTN_A		0x10
+#define BTN_B		0x20
+#define BTN_CTR		0x40
+#define BTN_ESC		0x80
+
+#define KEY_XY		0x0F
+#define BTN_AB		0x30
+
 #define PUSH_AI		0x01
 #define PUSH_BI		0x02
 #define PUSH_AX		0x04
 #define PUSH_BX		0x08
-
 
 typedef struct _BUTTON_INFO_ {
 	// 初期設定
@@ -47,6 +59,7 @@ extern int  halKey8(BUTTON_INFO* btn);
 
 extern int  halIsA(BUTTON_INFO* btn);
 extern int  halIsB(BUTTON_INFO* btn);
+extern int  halIsB_hold(BUTTON_INFO* btn);
 extern int  halIsAB(BUTTON_INFO* btn);
 extern int  halIsAB_hold(BUTTON_INFO* btn);
 extern int  halIsAB_rrse(BUTTON_INFO* btn);
