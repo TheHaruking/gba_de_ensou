@@ -66,9 +66,12 @@ void SoundPlay(SOUND_PLAY* d, BUTTON_INFO* btn) {
 	}
 
 	// メロディ！
-	if (halIsKey(btn)) {
-
+	d->note = 16 - (halKey8(btn) * 2);
+	d->ab   = (halIsB_hold(btn)) ? 0 : 1;
+	if(halKey8(btn) == 7) {
+		d->note += (d->high_flag) ? 16 : 0;
 	}
+	d->note += d->offset + d->key + d->ab;	
 
 	// 入力
 	if (   halIsAxB(btn) & (PUSH_AI | PUSH_BI)
@@ -83,14 +86,7 @@ void SoundPlay(SOUND_PLAY* d, BUTTON_INFO* btn) {
 		int snd_amp_fix  = (d->snd_amp  & 0x01) << 11;
 		int snd_vol_fix  = (d->snd_vol  & 0x0f) << 12;
 
-		// 音階決定
-		d->note = 16 - (halKey8(btn) * 2);
-		d->ab   = (halIsB_hold(btn)) ? 0 : 1;
-		if(halKey8(btn) == 7) {
-			d->note += (d->high_flag) ? 16 : 0;
-		}
-		d->note += d->offset + d->key + d->ab;	
-
+		// 
 		note_total = 0x8000 | freq_tbl[d->note];
 		snd_total  = snd_duty_fix | snd_amp_fix | snd_time_fix | snd_vol_fix;
 		// Sweep は 使わない
