@@ -28,9 +28,9 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	int m, n;
 
 	m = 128;
-	n = 480;
+	n = SCREEN_WIDTH * 2; // 480;
 	vpd->frame  = 0;
-	vpd->mem    = (u16* )malloc(m * 2);
+	vpd->mem    = (u16* )malloc(m * sizeof(u16));
 	// [m][.] ... 高さ
 	// [.][n] ... 横
 	vpd->vram   = (u16**)malloc(m * SIZE_BAR * sizeof(u16*));
@@ -58,32 +58,33 @@ void DrawLines(VISUAL_PLAY* vpd, unsigned int y, int flag){
 		vpd->mem[y] = RGB5(31, 15, 0);
 	}
 }
-
-void ConvertMem(VISUAL_PLAY* vpd){
-	int n  = vpd->frame;
-	int n2 = vpd->frame + SCREEN_WIDTH;
-
-	// セットした色を、実際の描画サイズ・向きに変換
-	for (int i = 0; i < 128 * SIZE_BAR; i++){
-		vpd->vram[i][n ] = vpd->mem[i >> 3];
-		vpd->vram[i][n2] = vpd->mem[i >> 3];
-	}
-	vpd->vram[0][0] = 0xffff;
-}
-
-// Test 
 void DrawLinesTest(VISUAL_PLAY* vpd){
 	int f = vpd->frame;
 	u16* dest = (u16*)(VRAM + SCREEN_WIDTH * 2 * f);
 	dmaCopy((u16*)vpd->mem, (u16*)dest, 128);
 }
 
+void ConvertMem(VISUAL_PLAY* vpd){
+	int n  = vpd->frame;
+	int n2 = vpd->frame + SCREEN_WIDTH;
+
+	// セットした色を、実際の描画サイズ・向きに変換
+	for (int i = 0; i < 32 * SIZE_BAR; i++){
+		vpd->vram[i][n ] = vpd->mem[i >> 3];
+		vpd->vram[i][n2] = vpd->mem[i >> 3];
+	}
+}
+
 void DrawMemTest(VISUAL_PLAY* vpd){
-	int f = vpd->frame % 240;
-	int dest = VRAM + (f << 1);
-	for (int i = 0 ; i < SCREEN_HEIGHT; i++){
-		*(u16 *)dest = vpd->vram[i][f];
-		dest += SCREEN_WIDTH << 1;
+	int f   = vpd->frame;
+	int dst = VRAM;
+	int tst = 32;
+
+	for (int j = 0; j < SCREEN_WIDTH; j++) {
+		*(u16*)(dst + j) = vpd->vram[0][j];
+		*(u16*)(dst + j + SCREEN_WIDTH * 1) = vpd->vram[1][j];
+		*(u16*)(dst + j + SCREEN_WIDTH * 2) = vpd->vram[2][j];
+		*(u16*)(dst + j + SCREEN_WIDTH * 5) = vpd->vram[3][j];
 	}
 }
 
