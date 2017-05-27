@@ -6,6 +6,8 @@
 
 #include "hal_eightinput.h"
 #include "sound_play.h"
+
+#define SIZE_BAR	8
 const unsigned short zero[128] = { 0 };
 // 映像用データ
 typedef struct _VP_LINE_ {
@@ -22,62 +24,73 @@ typedef struct _VISUAL_PLAY_ {
 	unsigned short **vram;
 } VISUAL_PLAY, *PVISUAL_PLAY;
 
-void InitVisualPlay(VISUAL_PLAY* vp_data){
-	vp_data->frame  = 0;
-	vp_data->mem    = (u16*)malloc(128 * 2);
-	vp_data->vram   = (u16**)malloc(160 * sizeof(u16*));
-	vp_data->vram[0]= (u16*) malloc(160 * 480 * sizeof(u16));
-	//memset(vp_data->mem , 0, 128 * 2);
-	memset(vp_data->vram, 0, 160 * 480 * sizeof(u16));
+void InitVisualPlay(VISUAL_PLAY* vpd){
+	int m, n;
+
+	m = 128;
+	n = 480;
+	vpd->frame  = 0;
+	vpd->mem    = (u16* )malloc(m * 2);
+	// [m][.] ... 高さ
+	// [.][n] ... 横
+	vpd->vram   = (u16**)malloc(m * SIZE_BAR * sizeof(u16*));
+	vpd->vram[0]= (u16* )malloc(m * SIZE_BAR * n * sizeof(u16));
+	for (int i = 1; i < m; i++)
+		vpd->vram[i] = vpd->vram[i-1] + n;
+	//memset(vpd->mem , 0, 128 * 2);
+	for (int i = 0; i < m * SIZE_BAR; i++)
+		memset(vpd->vram[i], 0, n * sizeof(u16));
 }
 
-void MoveLine(VISUAL_PLAY* vp_data) {
-	if ((++vp_data->frame) >= SCREEN_WIDTH) {
-		vp_data->frame = 0;
+void MoveLine(VISUAL_PLAY* vpd) {
+	if ((++vpd->frame) >= (SCREEN_WIDTH)) {
+		vpd->frame = 0;
 	}
 }
 
 // 方法その２ 色で制御
-// id でなく、128固定
-void DrawLines(VISUAL_PLAY* vp_data,unsigned int y, int flag){
-	y &= 0xff;
-	dmaCopy(zero, vp_data->mem, 128);
+void DrawLines(VISUAL_PLAY* vpd, unsigned int y, int flag){
+	y &= 0x7f;
+	dmaCopy(zero, vpd->mem, 128);
+
+	// 音程に色をセット
 	if (flag){
-		vp_data->mem[y] = RGB5(31, 15, 0);
+		vpd->mem[y] = RGB5(31, 15, 0);
 	}
+}
+
+void ConvertMem(VISUAL_PLAY* vpd){
+	int n  = vpd->frame;
+	int n2 = vpd->frame + SCREEN_WIDTH;
+
+	// セットした色を、実際の描画サイズ・向きに変換
+	for (int i = 0; i < 128 * SIZE_BAR; i++){
+		vpd->vram[i][n ] = vpd->mem[i >> 3];
+		vpd->vram[i][n2] = vpd->mem[i >> 3];
+	}
+	vpd->vram[0][0] = 0xffff;
 }
 
 // Test 
-void DrawLinesTest(VISUAL_PLAY* vp_data){
-	int f = vp_data->frame;
+void DrawLinesTest(VISUAL_PLAY* vpd){
+	int f = vpd->frame;
 	u16* dest = (u16*)(VRAM + SCREEN_WIDTH * 2 * f);
-	dmaCopy((u16*)vp_data->mem, (u16*)dest, 128);
+	dmaCopy((u16*)vpd->mem, (u16*)dest, 128);
 }
 
-void ConvertMem(VISUAL_PLAY* vp_data){
-	int f  = SCREEN_WIDTH + vp_data->frame;
-	int f2 = vp_data->frame;
-	for (int i = 0; i < 128; i++){
-		vp_data->vram[f][i ] = vp_data->mem[i];
-		vp_data->vram[f][i ] = vp_data->mem[i];
-	}
-	vp_data->vram[0][0] = 0xffff;
-}
-
-void DrawMemTest(VISUAL_PLAY* vp_data){
-	int f = vp_data->frame;
-	int dest = VRAM + (SCREEN_WIDTH - f) * 1;
-	for (int i = 0 ; i < 128; i++){
-		*(u16 *)dest = vp_data->mem[128 - i];
+void DrawMemTest(VISUAL_PLAY* vpd){
+	int f = vpd->frame % 240;
+	int dest = VRAM + (f << 1);
+	for (int i = 0 ; i < SCREEN_HEIGHT; i++){
+		*(u16 *)dest = vpd->vram[i][f];
 		dest += SCREEN_WIDTH << 1;
 	}
 }
 
-void FlushVram(VISUAL_PLAY* vp_data) {
-	int f = vp_data->frame;
+void FlushVram(VISUAL_PLAY* vpd) {
 	int d = VRAM;
 	for (int i = 0; i < SCREEN_HEIGHT; i++) {
-		dmaCopy((u16*)&vp_data->vram[i][0], (u16 *)0x06000000, SCREEN_WIDTH);
+		dmaCopy((u16*)&vpd->vram[i][0], (u16 *)0x06000000, SCREEN_WIDTH);
 		d += SCREEN_WIDTH << 1;
 	}
 }
@@ -120,7 +133,7 @@ int main(void) {
 		MoveLine(&vp_data);
 		DrawLines(&vp_data, sp_data.note, halIsAB_hold(&b));
 		//DrawLinesTest(&vp_data);
-		ConvertMem(&vp_data);
+		//ConvertMem(&vp_data);
 		DrawMemTest(&vp_data);
 		//FlushVram(&vp_data);
 
