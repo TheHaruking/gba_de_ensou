@@ -35,11 +35,13 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	// [.][n] ... 横
 	vpd->vram   = (u16**)malloc(m * SIZE_BAR * sizeof(u16*));
 	vpd->vram[0]= (u16* )malloc(m * SIZE_BAR * n * sizeof(u16));
-	for (int i = 1; i < m; i++)
+	for (int i = 1; i < m; i++) {
 		vpd->vram[i] = vpd->vram[i-1] + n;
+	}
 	//memset(vpd->mem , 0, 128 * 2);
-	for (int i = 0; i < m * SIZE_BAR; i++)
+	for (int i = 0; i < m * SIZE_BAR; i++) {
 		memset(vpd->vram[i], 0, n * sizeof(u16));
+	}
 }
 
 void MoveLine(VISUAL_PLAY* vpd) {

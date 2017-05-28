@@ -63,9 +63,11 @@ extern int  halIsB_hold(BUTTON_INFO* btn);
 extern int  halIsAB(BUTTON_INFO* btn);
 extern int  halIsAB_hold(BUTTON_INFO* btn);
 extern int  halIsAB_rrse(BUTTON_INFO* btn);
+extern int  halIsAB_diff(BUTTON_INFO* btn);
 extern int  halIsAxB(BUTTON_INFO* btn);
 
 extern int  halIsKey(BUTTON_INFO* btn);
+extern int  halIsKey_hold(BUTTON_INFO* btn);
 extern int  halIsFirstKey( BUTTON_INFO* btn );
 
 #ifdef __cplusplus

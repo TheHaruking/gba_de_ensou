@@ -210,6 +210,10 @@ int halIsKey(BUTTON_INFO* btn){
 	return (btn->k1 | btn->k2) && btn->k0;
 }
 
+int halIsKey_hold(BUTTON_INFO* btn){
+	return btn->k0 & KEY_XY;
+}
+
 int halIsA(BUTTON_INFO* btn){
 	return (btn->b1 & BTN_A) > 0;
 }
@@ -232,6 +236,10 @@ int halIsAB_hold(BUTTON_INFO* btn){
 
 int halIsAB_rrse(BUTTON_INFO* btn){
 	return btn->b2 & BTN_AB;
+}
+
+int halIsAB_diff(BUTTON_INFO* btn){
+	return (btn->b0 ^ btn->b_old) & BTN_AB;
 }
 
 int halIsAxB(BUTTON_INFO* btn){

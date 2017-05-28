@@ -66,16 +66,32 @@ void SoundPlay(SOUND_PLAY* d, BUTTON_INFO* btn) {
 	}
 
 	// メロディ！
-	d->note = 16 - (halKey8(btn) * 2);
-	d->ab   = (halIsB_hold(btn)) ? 0 : 1;
-	if(halKey8(btn) == 7) {
-		d->note += (d->high_flag) ? 16 : 0;
+	// 1. AかBを押した瞬間
+	// 2. AかBを押しつつ、十字キーを動かした瞬間
+	// 3. AとBの片方離したが、一方が残っている場合
+	if (   (halIsAB(btn)      && halIsKey_hold(btn))
+		|| (halIsAB_hold(btn) && halIsKey(btn)) 
+		|| (halIsAB_diff(btn) && halIsAB_hold(btn)) ) 
+	{
+		d->note = 16 - (halKey8(btn) * 2);
+		
+		// どのボタンで鳴らしているかを記憶しておく。
+		if (halIsAB(btn)) {
+			d->ab_sounding = (halIsAB(btn) & BTN_A) ? 1 : 0;
+		}
+		if (halIsAB_rrse(btn)) {
+			d->ab_sounding = (halIsAB_rrse(btn) & BTN_B) ? 1 : 0;
+		}
+		if(halKey8(btn) == 7) {
+			d->note += (d->high_flag) ? 16 : 0;
+		}
+		d->note += d->offset + d->key + d->ab_sounding;	
 	}
-	d->note += d->offset + d->key + d->ab;	
 
 	// 入力
-	if (   halIsAxB(btn) & (PUSH_AI | PUSH_BI)
-		||(halIsKey(btn) && halIsAB_hold(btn))  ) 
+	if (   (halIsAB(btn)      && halIsKey_hold(btn))
+		|| (halIsAB_hold(btn) && halIsKey(btn)) 
+		|| (halIsAB_diff(btn) && halIsAB_hold(btn)) ) 
 	{
 		int swp_total;
 		int note_total;
@@ -91,8 +107,6 @@ void SoundPlay(SOUND_PLAY* d, BUTTON_INFO* btn) {
 		snd_total  = snd_duty_fix | snd_amp_fix | snd_time_fix | snd_vol_fix;
 		// Sweep は 使わない
 		swp_total  = 0x0000;
-		// どのボタンで鳴らしているかを記憶しておく。
-		d->ab_sounding = (halIsA(btn)) ? 0x10 : 0x20;
 
 		// Beep!
 		REG_SOUND1CNT_L = swp_total;
@@ -101,13 +115,8 @@ void SoundPlay(SOUND_PLAY* d, BUTTON_INFO* btn) {
 		d->count++;
 	}
 
-	// クロス打ち
-	if (halIsAxB(btn) & (PUSH_AX | PUSH_BX)) {
-
-	}
-
 	// キーオフ
-	if (halIsAB_rrse(btn) & d->ab_sounding){
+	if (!halIsAB_hold(btn)){
 		int snd_total;
 		
 		int snd_duty_fix = (d->snd_duty & 0x03) << 6;
