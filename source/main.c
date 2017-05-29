@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <mappy.h>
 #include "hal_eightinput.h"
 #include "sound_play.h"
 
@@ -25,21 +26,24 @@ typedef struct _VISUAL_PLAY_ {
 } VISUAL_PLAY, *PVISUAL_PLAY;
 
 void InitVisualPlay(VISUAL_PLAY* vpd){
-	int m, n;
+	int m, n, m_org;
 
-	m = 128;
+	m_org = 128;
+	m = m_org * SIZE_BAR;
 	n = SCREEN_WIDTH * 2; // 480;
 	vpd->frame  = 0;
-	vpd->mem    = (u16* )malloc(m * sizeof(u16));
+	vpd->mem    = (u16* )malloc(sizeof(u16) * m_org);
 	// [m][.] ... 高さ
 	// [.][n] ... 横
-	vpd->vram   = (u16**)malloc(m * SIZE_BAR * sizeof(u16*));
-	vpd->vram[0]= (u16* )malloc(m * SIZE_BAR * n * sizeof(u16));
-	for (int i = 1; i < m; i++)
-		vpd->vram[i] = vpd->vram[i-1] + n;
-	//memset(vpd->mem , 0, 128 * 2);
-	for (int i = 0; i < m * SIZE_BAR; i++)
-		memset(vpd->vram[i], 0, n * sizeof(u16));
+	vpd->vram   = (u16**)malloc(sizeof(u16*) * m);       // (4 * 1024)
+	vpd->vram[0]= (u16* )malloc(sizeof(u16)  * m * n);   // (2 * 480)
+	for (int i = 1; i < m ; i++) {
+		vpd->vram[i] = vpd->vram[i-1] + sizeof(u16) * n;
+	}
+	for (int i = 0; i < m; i++) {
+		memset((u16*)vpd->vram[i], (u16)0x0000, sizeof(u16) * n);
+	}
+	dprintf("vram : %08X\n", vpd->vram);
 }
 
 void MoveLine(VISUAL_PLAY* vpd) {
@@ -66,26 +70,27 @@ void DrawLinesTest(VISUAL_PLAY* vpd){
 
 void ConvertMem(VISUAL_PLAY* vpd){
 	int n  = vpd->frame;
-	int n2 = vpd->frame + SCREEN_WIDTH;
+	//int n2 = vpd->frame + SCREEN_WIDTH;
 
 	// セットした色を、実際の描画サイズ・向きに変換
-	for (int i = 0; i < 32 * SIZE_BAR; i++){
-		vpd->vram[i][n ] = vpd->mem[i >> 3];
-		vpd->vram[i][n2] = vpd->mem[i >> 3];
+	for (int i = 0; i < 128; i++){
+		vpd->vram[0][i ] = vpd->mem[i];
+		//vpd->vram[i][n2] = vpd->mem[i];
 	}
 }
 
 void DrawMemTest(VISUAL_PLAY* vpd){
 	int f   = vpd->frame;
 	int dst = VRAM;
-	int tst = 32;
 
-	for (int j = 0; j < SCREEN_WIDTH; j++) {
-		*(u16*)(dst + j) = vpd->vram[0][j];
-		*(u16*)(dst + j + SCREEN_WIDTH * 1) = vpd->vram[1][j];
-		*(u16*)(dst + j + SCREEN_WIDTH * 2) = vpd->vram[2][j];
-		*(u16*)(dst + j + SCREEN_WIDTH * 5) = vpd->vram[3][j];
-	}
+	// test
+	int j = 0;
+	//for (int j = 0; j < 160; j++) {
+		for (int i = 0; i < 240; i++) {
+			//vpd->vram[j][i] = 0x001F;
+			*(u16*)(dst + (j * 240 * 2) + (i * 2)) = vpd->vram[j][i];
+		}
+	//}
 }
 
 void FlushVram(VISUAL_PLAY* vpd) {
@@ -133,8 +138,9 @@ int main(void) {
 		// 映像
 		MoveLine(&vp_data);
 		DrawLines(&vp_data, sp_data.note, halIsAB_hold(&b));
+		dprintf("note : %d\n", sp_data.note);
 		//DrawLinesTest(&vp_data);
-		//ConvertMem(&vp_data);
+		ConvertMem(&vp_data);
 		DrawMemTest(&vp_data);
 		//FlushVram(&vp_data);
 
