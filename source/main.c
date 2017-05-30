@@ -20,30 +20,53 @@ typedef struct _VP_LINE_ {
 } VP_LINE, *PVP_LINE;
 
 typedef struct _VISUAL_PLAY_ {
-	unsigned int   frame;
-	unsigned short *mem;
-	unsigned short **vram;
+	unsigned int    frame;
+	unsigned char * mem;
+	unsigned char **vram;
 } VISUAL_PLAY, *PVISUAL_PLAY;
 
 void InitVisualPlay(VISUAL_PLAY* vpd){
 	int m, n, m_org;
 
+	*(u16*)(0x05000000 + 2) = 0x03ff;
 	m_org = 128;
-	m = m_org * SIZE_BAR;
-	n = SCREEN_WIDTH * 2; // 480;
+	m = SCREEN_HEIGHT;
+	n = sizeof(u8) * SCREEN_WIDTH * 2; // 480;
 	vpd->frame  = 0;
-	vpd->mem    = (u16* )malloc(sizeof(u16) * m_org);
+	vpd->mem    = (u8* )malloc(sizeof(u8 ) * m_org);
 	// [m][.] ... 高さ
 	// [.][n] ... 横
-	vpd->vram   = (u16**)malloc(sizeof(u16*) * m);       // (4 * 1024)
-	vpd->vram[0]= (u16* )malloc(sizeof(u16)  * m * n);   // (2 * 480)
+	vpd->vram   = (u8**)malloc(sizeof(u8*) * m);       // (4 * 160)
+	vpd->vram[0]= (u8* )malloc(sizeof(u8 ) * n * m);   // (2 * 160 * 480)
 	for (int i = 1; i < m ; i++) {
-		vpd->vram[i] = vpd->vram[i-1] + sizeof(u16) * n;
+		// 先頭アドレスをセット ： 2 x 480 間隔で
+		vpd->vram[i] = vpd->vram[i-1] + sizeof(u8) * n;
 	}
-	for (int i = 0; i < m; i++) {
-		memset((u16*)vpd->vram[i], (u16)0x0000, sizeof(u16) * n);
+	dprintf("vram : %d\n", sizeof(u8 ) * n * m);
+}
+
+// test
+void testvram(VISUAL_PLAY* vpd){
+	int d = VRAM;
+
+	vpd->vram[0][0]   = 0x01;
+	vpd->vram[0][1]   = 0x01;
+	vpd->vram[0][2]   = 0x01;
+	vpd->vram[0][20]  = 0x01;
+	vpd->vram[1][0]   = 0x01;
+	vpd->vram[2][0]   = 0x01;
+	vpd->vram[20][0]   = 0x01;
+	vpd->vram[21][0]   = 0x01;
+	vpd->vram[21][1]   = 0x01;
+	vpd->vram[80][120]= 0x01;
+	vpd->vram[0][239] = 0x01;
+	vpd->vram[1][239] = 0x01;
+	vpd->vram[159][239] = 0x01;
+	
+	for (int i = 0; i < SCREEN_HEIGHT; i++) {
+		dmaCopy((u8*)&vpd->vram[i][5], (u16 *)d, SCREEN_WIDTH);
+		d += sizeof(u8) * SCREEN_WIDTH;
 	}
-	dprintf("vram : %08X\n", vpd->vram);
 }
 
 void MoveLine(VISUAL_PLAY* vpd) {
@@ -59,7 +82,7 @@ void DrawLines(VISUAL_PLAY* vpd, unsigned int y, int flag){
 
 	// 音程に色をセット
 	if (flag){
-		vpd->mem[y] = RGB5(31, 15, 0);
+		vpd->mem[y] = 0x01;
 	}
 }
 void DrawLinesTest(VISUAL_PLAY* vpd){
@@ -114,7 +137,7 @@ int main(void) {
 	irqInit();
 	irqEnable(IRQ_VBLANK);
 	// consoleDemoInit();
-	SetMode(3 | BG2_ON);
+	SetMode(4 | BG2_ON);
 
 	// Init private
 	InitSoundPlay(&sp_data);
@@ -122,6 +145,7 @@ int main(void) {
 
 	// Init Video
 	InitVisualPlay(&vp_data);
+	testvram(&vp_data);
 
 	// Sound Init
 	REG_SOUNDCNT_X = 0x80;		// turn on sound circuit
@@ -136,12 +160,12 @@ int main(void) {
 		SoundPlay(&sp_data, &b);
 
 		// 映像
-		MoveLine(&vp_data);
-		DrawLines(&vp_data, sp_data.note, halIsAB_hold(&b));
-		dprintf("note : %d\n", sp_data.note);
+		//MoveLine(&vp_data);
+		//DrawLines(&vp_data, sp_data.note, halIsAB_hold(&b));
+		//dprintf("note : %d\n", sp_data.note);
 		//DrawLinesTest(&vp_data);
-		ConvertMem(&vp_data);
-		DrawMemTest(&vp_data);
+		//ConvertMem(&vp_data);
+		//DrawMemTest(&vp_data);
 		//FlushVram(&vp_data);
 
 		// 垂直同期
