@@ -8,8 +8,6 @@
 #include "hal_eightinput.h"
 #include "sound_play.h"
 
-#define SIZE_BAR	8
-const unsigned short zero[128] = { 0 };
 // 映像用データ
 typedef struct _VP_LINE_ {
 	int		id;
@@ -38,14 +36,15 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	// [.][n] ... 横
 	vpd->vram   = (u8**)malloc(sizeof(u8*) * m);       // (4 * 160)
 	vpd->vram[0]= (u8* )malloc(sizeof(u8 ) * n * m);   // (2 * 160 * 480)
+	// 先頭アドレスをセット ： 2 x 480 間隔で
 	for (int i = 1; i < m ; i++) {
-		// 先頭アドレスをセット ： 2 x 480 間隔で
 		vpd->vram[i] = vpd->vram[i-1] + sizeof(u8) * n;
 	}
 	dprintf("vram : %d\n", sizeof(u8 ) * n * m);
 }
 
 // test
+// 端や真ん中に点を描画
 void testvram(VISUAL_PLAY* vpd){
 	int d = VRAM;
 
@@ -70,6 +69,7 @@ void testvram(VISUAL_PLAY* vpd){
 }
 
 void MoveLine(VISUAL_PLAY* vpd) {
+	// 0 ~ 239 をループする数値(スクロール用)
 	if ((++vpd->frame) >= (SCREEN_WIDTH)) {
 		vpd->frame = 0;
 	}
@@ -85,42 +85,35 @@ void DrawLines(VISUAL_PLAY* vpd, unsigned int y, int flag){
 		vpd->mem[y] = 0x01;
 	}
 }
+
+// 上から128音程描画確認
 void DrawLinesTest(VISUAL_PLAY* vpd){
 	int f = vpd->frame;
 	u16* dest = (u16*)(VRAM + SCREEN_WIDTH * 2 * f);
 	dmaCopy((u16*)vpd->mem, (u16*)dest, 128);
 }
 
+// mem を、実際に描画する際の絵に変換
 void ConvertMem(VISUAL_PLAY* vpd){
 	int n  = vpd->frame;
-	//int n2 = vpd->frame + SCREEN_WIDTH;
+	int n2 = vpd->frame + SCREEN_WIDTH;
+	int note = 26;
 
 	// セットした色を、実際の描画サイズ・向きに変換
-	for (int i = 0; i < 128; i++){
-		vpd->vram[0][i ] = vpd->mem[i];
-		//vpd->vram[i][n2] = vpd->mem[i];
+	// i >> 3 して、棒を縦8 にしている
+	for (int i = 0; i < SCREEN_HEIGHT; i++){
+		vpd->vram[i][n ] = vpd->mem[(i >> 3) + note]; 
+		vpd->vram[i][n2] = vpd->mem[(i >> 3) + note]; 
 	}
 }
 
-void DrawMemTest(VISUAL_PLAY* vpd){
-	int f   = vpd->frame;
-	int dst = VRAM;
-
-	// test
-	int j = 0;
-	//for (int j = 0; j < 160; j++) {
-		for (int i = 0; i < 240; i++) {
-			//vpd->vram[j][i] = 0x001F;
-			*(u16*)(dst + (j * 240 * 2) + (i * 2)) = vpd->vram[j][i];
-		}
-	//}
-}
-
+// バッファからVRAMに書き込み
 void FlushVram(VISUAL_PLAY* vpd) {
-	int d = VRAM;
+	unsigned int d = VRAM;
+	// スクロールさせるため、1行ずつ書き込む
 	for (int i = 0; i < SCREEN_HEIGHT; i++) {
-		dmaCopy((u16*)&vpd->vram[i][0], (u16 *)0x06000000, SCREEN_WIDTH);
-		d += SCREEN_WIDTH << 1;
+		dmaCopy((u8*)&vpd->vram[i][0], (u16 *)d, SCREEN_WIDTH);
+		d += sizeof(u8) * SCREEN_WIDTH;
 	}
 }
 
@@ -160,13 +153,13 @@ int main(void) {
 		SoundPlay(&sp_data, &b);
 
 		// 映像
-		//MoveLine(&vp_data);
-		//DrawLines(&vp_data, sp_data.note, halIsAB_hold(&b));
+		MoveLine(&vp_data);
+		DrawLines(&vp_data, sp_data.note, halIsAB_hold(&b));
 		//dprintf("note : %d\n", sp_data.note);
 		//DrawLinesTest(&vp_data);
-		//ConvertMem(&vp_data);
+		ConvertMem(&vp_data);
 		//DrawMemTest(&vp_data);
-		//FlushVram(&vp_data);
+		FlushVram(&vp_data);
 
 		// 垂直同期
 		VBlankIntrWait();
