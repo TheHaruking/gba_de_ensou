@@ -26,14 +26,19 @@ typedef struct _VISUAL_PLAY_ {
 void InitVisualPlay(VISUAL_PLAY* vpd){
 	int m, n, m_org;
 
-	*(u16*)(0x05000000 + 2) = 0x03ff;
+	// パレットに色を設定
+	BG_COLORS[0] = RGB5(0,0,0);
+	BG_COLORS[1] = RGB5(31,31,0);
+	BG_COLORS[2] = RGB5(0,0,31);
+	
 	m_org = 128;
 	m = SCREEN_HEIGHT;
 	n = sizeof(u8) * SCREEN_WIDTH * 2; // 480;
 	vpd->frame  = 0;
+	// mem[128]
 	vpd->mem    = (u8* )malloc(sizeof(u8 ) * m_org);
-	// [m][.] ... 高さ
-	// [.][n] ... 横
+	// vram[m][.] ... 高さ
+	// vram[.][n] ... 横
 	vpd->vram   = (u8**)malloc(sizeof(u8*) * m);       // (4 * 160)
 	vpd->vram[0]= (u8* )malloc(sizeof(u8 ) * n * m);   // (2 * 160 * 480)
 	// 先頭アドレスをセット ： 2 x 480 間隔で
@@ -68,6 +73,7 @@ void testvram(VISUAL_PLAY* vpd){
 	}
 }
 
+// スクロール用数値(frame)を計算
 void MoveLine(VISUAL_PLAY* vpd) {
 	// 0 ~ 239 をループする数値(スクロール用)
 	if ((++vpd->frame) >= (SCREEN_WIDTH)) {
@@ -75,10 +81,11 @@ void MoveLine(VISUAL_PLAY* vpd) {
 	}
 }
 
-// 方法その２ 色で制御
+// 音の高さデータを色に変換
 void DrawLines(VISUAL_PLAY* vpd, unsigned int y, int flag){
 	y &= 0x7f;
-	dmaCopy(zero, vpd->mem, 128);
+	// 黒で初期化
+	memset(vpd->mem, 0x00, 128);
 
 	// 音程に色をセット
 	if (flag){
@@ -138,7 +145,7 @@ int main(void) {
 
 	// Init Video
 	InitVisualPlay(&vp_data);
-	testvram(&vp_data);
+	//testvram(&vp_data);
 
 	// Sound Init
 	REG_SOUNDCNT_X = 0x80;		// turn on sound circuit
