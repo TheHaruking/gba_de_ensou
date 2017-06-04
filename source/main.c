@@ -70,7 +70,7 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	dprintf("vram : %d\n", sizeof(u8 ) * n * m);
 }
 
-void obj4draw(OBJATTR* attr, int chr, int x, int y, ){
+void obj4draw(OBJATTR* attr, int chr, int x, int y){
 	int x2 = x + 8;
 	int y2 = y + 8;
 	attr[0].attr0 = OBJ_Y(y ) | OBJ_16_COLOR;
@@ -197,7 +197,9 @@ void DrawLinesTest(VISUAL_PLAY* vpd){
 void ConvertMem(VISUAL_PLAY* vpd){
 	int n  = vpd->frame;
 	int n2 = vpd->frame + SCREEN_WIDTH;
-	int note = 26;
+	// とりあえずnote 85にして即時確認できるように。
+	// 本当は、現在のキーボードのオクターブをみて決めないとダメ
+	int note = 85;
 
 	// セットした色を、実際の描画サイズ・向きに変換
 	// i >> 3 して、棒を縦8 にしている
