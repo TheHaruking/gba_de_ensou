@@ -16,10 +16,10 @@
 #define MODE_PLAY	0
 #define MODE_GAME	1
 
-#define $A			0xB0
-#define $I			0xB1
-#define $U			0xB2
-#define $N			0xFF
+#define $AA			0xB0
+#define $II			0xB1
+#define $UU			0xB2
+#define $NN			0xFF
 
 
 // 映像用データ
@@ -70,6 +70,25 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	dprintf("vram : %d\n", sizeof(u8 ) * n * m);
 }
 
+void obj4draw(OBJATTR* attr, int chr, int x, int y, ){
+	int x2 = x + 8;
+	int y2 = y + 8;
+	attr[0].attr0 = OBJ_Y(y ) | OBJ_16_COLOR;
+	attr[0].attr1 = OBJ_X(x ) | 0         | OBJ_VFLIP;
+	attr[0].attr2 = OBJ_CHAR(chr);
+	
+	attr[1].attr0 = OBJ_Y(y ) | OBJ_16_COLOR;
+	attr[1].attr1 = OBJ_X(x2) | OBJ_HFLIP | OBJ_VFLIP;
+	attr[1].attr2 = OBJ_CHAR(chr);
+
+	attr[2].attr0 = OBJ_Y(y2) | OBJ_16_COLOR;
+	attr[2].attr1 = OBJ_X(x)  | 0         | 0;
+	attr[2].attr2 = OBJ_CHAR(chr);
+
+	attr[3].attr0 = OBJ_Y(y2) | OBJ_16_COLOR;
+	attr[3].attr1 = OBJ_X(x2) | OBJ_HFLIP | 0;
+	attr[3].attr2 = OBJ_CHAR(chr);
+}
 
 // test
 // obj描画Test
@@ -78,19 +97,22 @@ void testobj(VISUAL_PLAY* vpd){
 	dmaCopy((u16*)chr003Tiles, BITMAP_OBJ_BASE_ADR, chr003TilesLen);
 	dmaCopy((u16*)chr003Pal,   OBJ_COLORS,          chr003PalLen);
 
-	//vpd->icon_key[0].attr0 = 
+	// vpd->icon_key[0].attr0 = 
 	vpd->icon_key[0].attr0 = OBJ_Y(16) | OBJ_16_COLOR;
 	vpd->icon_key[0].attr1 = OBJ_X(19);
 	// vpd->icon_key[0].attr2 = OBJ_CHAR(0);
 	// ビットマップモードの場合、先頭番号が512番目からとのこと・・・
 	vpd->icon_key[0].attr2 = OBJ_CHAR(513);
 
-	vpd->icon_key[1].attr0 = OBJ_Y(32) | OBJ_16_COLOR;
-	vpd->icon_key[1].attr1 = OBJ_X(55);
-	vpd->icon_key[1].attr2 = OBJ_CHAR(512 + $U);
-	
-	OAM[0] = vpd->icon_key[0];
-	OAM[1] = vpd->icon_key[1];
+	for (int i = 0; i < 8; i++) {
+		obj4draw(&vpd->icon_key[4 + i*4], 512 + 0x83, 0, i*16);
+	}
+	// 実際のOBJ情報メモリに書き込み
+	dmaCopy(vpd->icon_key, OAM, sizeof(OBJATTR) * 128);
+}
+
+void ObjFeeder(OBJATTR* attr, int alpha){
+
 }
 
 // test
