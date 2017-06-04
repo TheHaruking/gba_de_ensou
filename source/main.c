@@ -112,7 +112,7 @@ void testobj(VISUAL_PLAY* vpd){
 }
 
 void ObjFeeder(OBJATTR* attr, int alpha){
-
+	
 }
 
 // test
