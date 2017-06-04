@@ -2,3 +2,4 @@
 /.vscode
 *.elf
 *.gba
+!gba_de_ensou_.gba
