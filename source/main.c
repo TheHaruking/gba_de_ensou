@@ -67,7 +67,6 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	for (int i = 1; i < m ; i++) {
 		vpd->vram[i] = vpd->vram[i-1] + sizeof(u8) * n;
 	}
-	dprintf("vram : %d\n", sizeof(u8 ) * n * m);
 }
 
 void obj4draw(OBJATTR* attr, int chr, int x, int y){
@@ -92,27 +91,35 @@ void obj4draw(OBJATTR* attr, int chr, int x, int y){
 
 // test
 // obj描画Test
-void testobj(VISUAL_PLAY* vpd){
-	// char
+void InitGraphic(VISUAL_PLAY* vpd){
+	// グラフィックデータをメモリへコピー
 	dmaCopy((u16*)chr003Tiles, BITMAP_OBJ_BASE_ADR, chr003TilesLen);
 	dmaCopy((u16*)chr003Pal,   OBJ_COLORS,          chr003PalLen);
 
-	// vpd->icon_key[0].attr0 = 
-	vpd->icon_key[0].attr0 = OBJ_Y(16) | OBJ_16_COLOR;
-	vpd->icon_key[0].attr1 = OBJ_X(19);
+	// OBJ に データセット
+	// vpd->icon_key[0].attr0 = OBJ_Y(16) | OBJ_16_COLOR;
+	// vpd->icon_key[0].attr1 = OBJ_X(19);
 	// vpd->icon_key[0].attr2 = OBJ_CHAR(0);
-	// ビットマップモードの場合、先頭番号が512番目からとのこと・・・
-	vpd->icon_key[0].attr2 = OBJ_CHAR(513);
+	// vpd->icon_key[0].attr2 = OBJ_CHAR(513); // ビットマップモードの場合、先頭番号が512番目からとのこと・・・
 
-	for (int i = 0; i < 8; i++) {
-		obj4draw(&vpd->icon_key[4 + i*4], 512 + 0x83, 0, i*16);
+	// 画面左 ９箱
+	for (int i = 0; i < 9; i++) {
+		obj4draw(&vpd->icon_key[4 + i*4], 512 + 0x86, 0, i*16);
 	}
+
 	// 実際のOBJ情報メモリに書き込み
 	dmaCopy(vpd->icon_key, OAM, sizeof(OBJATTR) * 128);
 }
 
-void ObjFeeder(OBJATTR* attr, int alpha){
-	
+void ObjFeeder(VISUAL_PLAY* vpd, int num){
+	// 画面左 ９箱
+	for (int i = 0; i < 9; i++) {
+		obj4draw(&vpd->icon_key[4 + i*4], 512 + 0x86, 0, i*16);
+	}
+	// 入力のあった方向を光らせる
+	if (num >= 0) {
+		obj4draw(&vpd->icon_key[4 + num*4], 512 + 0x83, 0, num*16);
+	}
 }
 
 // test
@@ -221,7 +228,8 @@ void FlushVram(VISUAL_PLAY* vpd) {
 
 // バッファからSpriteRAMに書き込み
 void FlushSprite(VISUAL_PLAY* vpd) {
-
+	// 実際のOBJ情報メモリに書き込み
+	dmaCopy(vpd->icon_key, OAM, sizeof(OBJATTR) * 128);
 }
 
 //---------------------------------------------------------------------------------
@@ -246,7 +254,7 @@ int main(void) {
 	// Init Video
 	InitVisualPlay(&vp_data);
 	//testvram(&vp_data);
-	testobj(&vp_data);
+	InitGraphic(&vp_data);
 
 	// Sound Init
 	REG_SOUNDCNT_X = 0x80;		// turn on sound circuit
@@ -263,11 +271,17 @@ int main(void) {
 		// 映像
 		MoveLine(&vp_data);
 		DrawLines(&vp_data, sp_data.note, halIsAB_hold(&b));
+		if (halIsKey_hold(&b)) {
+			ObjFeeder(&vp_data, 9 - sp_data.vector);
+		} else {
+			ObjFeeder(&vp_data, -1);
+		}
 		//dprintf("note : %d\n", sp_data.note);
 		//DrawLinesTest(&vp_data);
 		ConvertMem(&vp_data);
 		//DrawMemTest(&vp_data);
 		FlushVram(&vp_data);
+		FlushSprite(&vp_data);
 
 		// 垂直同期
 		VBlankIntrWait();

@@ -55,7 +55,7 @@ void SoundPlay(SOUND_PLAY* d, BUTTON_INFO* btn) {
 		d->key = 11 - halKeyCtr12(btn);
 	}
 
-	// ↖の音程を臨機応変に
+	// ↖の音程を臨機応変に 1
 	switch (halKey8(btn)) {
 		case 0: case 1: case 2:
 			d->high_flag = 1;
@@ -63,6 +63,13 @@ void SoundPlay(SOUND_PLAY* d, BUTTON_INFO* btn) {
 		case 4: case 5: case 6:
 			d->high_flag = 0;
 			break;
+	}
+
+	// vector
+	d->vector = 8 - halKey8(btn);
+	// ↖の音程を臨機応変に 2
+	if(halKey8(btn) == 7) {
+		d->vector += (d->high_flag) ? 8 : 0;
 	}
 
 	// メロディ！
@@ -73,7 +80,13 @@ void SoundPlay(SOUND_PLAY* d, BUTTON_INFO* btn) {
 		|| (halIsAB_hold(btn) && halIsKey(btn)) 
 		|| (halIsAB_diff(btn) && halIsAB_hold(btn)) ) 
 	{
-		d->note = 16 - (halKey8(btn) * 2);
+		/* ***
+		d->vector = 8 - halKey8(btn);
+		// ↖の音程を臨機応変に 2
+		if(halKey8(btn) == 7) {
+			d->vector += (d->high_flag);
+		}
+		*** */
 		
 		// どのボタンで鳴らしているかを記憶しておく。
 		if (halIsAB(btn)) {
@@ -82,10 +95,7 @@ void SoundPlay(SOUND_PLAY* d, BUTTON_INFO* btn) {
 		if (halIsAB_rrse(btn)) {
 			d->ab_sounding = (halIsAB_rrse(btn) & BTN_B) ? 1 : 0;
 		}
-		if(halKey8(btn) == 7) {
-			d->note += (d->high_flag) ? 16 : 0;
-		}
-		d->note += d->offset + d->key + d->ab_sounding;	
+		d->note = d->vector * 2 + d->offset + d->key + d->ab_sounding;	
 	}
 
 	// 入力

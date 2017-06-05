@@ -10,6 +10,7 @@ extern "C" {
 
 typedef struct _SOUND_PLAY_ {
     int count;
+	int vector;
 	int note;
 	int offset;
 	int ab;
