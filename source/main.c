@@ -16,20 +16,14 @@
 #define MODE_PLAY	0
 #define MODE_GAME	1
 
-#define $AA			0xB0
-#define $II			0xB1
-#define $UU			0xB2
-#define $NN			0xFF
-
-
 // 映像用データ
 typedef struct _VISUAL_PLAY_ {
 	int			    frame;		// スクロール用カウンタ
 	unsigned char** mem;		// 色保存
 	unsigned char** vram;		// 描画バッファ
 	int				mode_flag;	// "演奏モード" or "楽譜モード"
-
 	OBJATTR*		icon_key;	// 左のアイコン
+	OBJATTR*		icon_ab;	// AB押したときのアイコン
 } VISUAL_PLAY, *PVISUAL_PLAY;
 
 // 初期化
@@ -55,11 +49,12 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	// 各配列メモリ確保
 	// mem[幅480][音程128]
 	// vram[高160][幅480]
-	vpd->mem    = (u8**)malloc(sizeof(u8*) * m_mem);
-	vpd->mem[0] = (u8* )malloc(sizeof(u8 ) * n_mem * m_mem);
-	vpd->vram   = (u8**)malloc(sizeof(u8*) * m);       // (4 * 160)
-	vpd->vram[0]= (u8* )malloc(sizeof(u8 ) * n * m);   // (2 * 160 * 480)
+	vpd->mem     = (u8**)malloc(sizeof(u8*) * m_mem);
+	vpd->mem[0]  = (u8* )malloc(sizeof(u8 ) * n_mem * m_mem);
+	vpd->vram    = (u8**)malloc(sizeof(u8*) * m);       // (4 * 160)
+	vpd->vram[0] = (u8* )malloc(sizeof(u8 ) * n * m);   // (2 * 160 * 480)
 	vpd->icon_key= (OBJATTR*)malloc(sizeof(OBJATTR) * 8);	// 左のアイコン	
+	vpd->icon_ab = (OBJATTR*)malloc(sizeof(OBJATTR) * 1);	// AB押したときの	
 	// 先頭アドレスをセット
 	for (int i = 1; i < m_mem ; i++) {
 		vpd->mem[i]  = vpd->mem[i-1]  + sizeof(u8) * n_mem;
@@ -69,6 +64,23 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	}
 }
 
+void FinishVisualPlay(VISUAL_PLAY* vpd){
+	free(vpd->icon_ab);
+	free(vpd->icon_key);
+	free(vpd->vram[0]);
+	free(vpd->vram);
+	free(vpd->mem[0]);
+	free(vpd->mem);
+}
+
+void objMove(OBJATTR* attr, int x, int y){
+	attr->attr0 &= 0xFF00;
+	attr->attr1 &= 0xFE00;
+	attr->attr0 |= OBJ_Y(y);
+	attr->attr1 |= OBJ_X(x);
+}
+
+// 4まとまりを一度に操作
 void obj4draw(OBJATTR* attr, int chr, int x, int y){
 	int x2 = x + 8;
 	int y2 = y + 8;
@@ -87,6 +99,13 @@ void obj4draw(OBJATTR* attr, int chr, int x, int y){
 	attr[3].attr0 = OBJ_Y(y2) | OBJ_16_COLOR;
 	attr[3].attr1 = OBJ_X(x2) | OBJ_HFLIP | 0;
 	attr[3].attr2 = OBJ_CHAR(chr);
+}
+
+void objInit(OBJATTR* attr, int chr, int col256){
+	col256 &= 1;
+	attr->attr0 = 0 | (col256 ? ATTR0_COLOR_256 : 0);
+	attr->attr1 = 0;
+	attr->attr2 = OBJ_CHAR(chr);
 }
 
 // test
@@ -190,7 +209,6 @@ void DrawKeyFrame(VISUAL_PLAY* vpd, unsigned int y, int flag){
 // 画面左に押しているキーを表示
 // 18 鍵盤 
 void DrawKey(VISUAL_PLAY* vpd, unsigned int y, int flag){
-
 }
 
 // 上から128音程描画確認
@@ -204,9 +222,9 @@ void DrawLinesTest(VISUAL_PLAY* vpd){
 void ConvertMem(VISUAL_PLAY* vpd){
 	int n  = vpd->frame;
 	int n2 = vpd->frame + SCREEN_WIDTH;
-	// とりあえずnote 85にして即時確認できるように。
+	// とりあえずnote 83にして即時確認できるように。
 	// 本当は、現在のキーボードのオクターブをみて決めないとダメ
-	int note = 85;
+	int note = 83;
 
 	// セットした色を、実際の描画サイズ・向きに変換
 	// i >> 3 して、棒を縦8 にしている
