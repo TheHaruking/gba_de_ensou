@@ -95,7 +95,8 @@ void SoundPlay(SOUND_PLAY* d, BUTTON_INFO* btn) {
 		if (halIsAB_rrse(btn)) {
 			d->ab_sounding = (halIsAB_rrse(btn) & BTN_B) ? 1 : 0;
 		}
-		d->note = d->vector * 2 + d->offset + d->key + d->ab_sounding;	
+		d->note18 = d->vector * 2 + d->ab_sounding;
+		d->note   = d->note18 + d->offset + d->key;	
 	}
 
 	// 入力

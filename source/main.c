@@ -15,6 +15,7 @@
 // ... の予定
 #define MODE_PLAY	0
 #define MODE_GAME	1
+#define OBJ_LEFT9	9
 
 // 映像用データ
 typedef struct _VISUAL_PLAY_ {
@@ -32,10 +33,10 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 
 	// パレットに色を設定
 	BG_COLORS[0]  = RGB5( 0, 0, 0);
-	BG_COLORS[1]  = RGB5(31,31, 0);
+	BG_COLORS[1]  = RGB5(31,15, 0);
 	BG_COLORS[2]  = RGB5( 0, 0,31);
 	OBJ_COLORS[0] = RGB5( 0, 0, 0);
-	OBJ_COLORS[1] = RGB5(31,31, 0);
+	OBJ_COLORS[1] = RGB5(31,15, 0);
 	OBJ_COLORS[2] = RGB5( 0, 0,31);
 	
 	// メモリ初期化
@@ -53,7 +54,7 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	vpd->mem[0]  = (u8* )malloc(sizeof(u8 ) * n_mem * m_mem);
 	vpd->vram    = (u8**)malloc(sizeof(u8*) * m);       // (4 * 160)
 	vpd->vram[0] = (u8* )malloc(sizeof(u8 ) * n * m);   // (2 * 160 * 480)
-	vpd->icon_key= (OBJATTR*)malloc(sizeof(OBJATTR) * 8);	// 左のアイコン	
+	vpd->icon_key= (OBJATTR*)malloc(sizeof(OBJATTR) * 4 * OBJ_LEFT9);// 左のアイコン	
 	vpd->icon_ab = (OBJATTR*)malloc(sizeof(OBJATTR) * 1);	// AB押したときの	
 	// 先頭アドレスをセット
 	for (int i = 1; i < m_mem ; i++) {
@@ -116,29 +117,33 @@ void InitGraphic(VISUAL_PLAY* vpd){
 	dmaCopy((u16*)chr003Pal,   OBJ_COLORS,          chr003PalLen);
 
 	// OBJ に データセット
-	// vpd->icon_key[0].attr0 = OBJ_Y(16) | OBJ_16_COLOR;
-	// vpd->icon_key[0].attr1 = OBJ_X(19);
-	// vpd->icon_key[0].attr2 = OBJ_CHAR(0);
-	// vpd->icon_key[0].attr2 = OBJ_CHAR(513); // ビットマップモードの場合、先頭番号が512番目からとのこと・・・
+	objInit(vpd->icon_ab, 515, 0);
 
 	// 画面左 ９箱
-	for (int i = 0; i < 9; i++) {
-		obj4draw(&vpd->icon_key[4 + i*4], 512 + 0x86, 0, i*16);
+	for (int i = 0; i < OBJ_LEFT9; i++) {
+		obj4draw(&vpd->icon_key[i*4], 512 + 0x86, 0, i*16);
 	}
 
 	// 実際のOBJ情報メモリに書き込み
-	dmaCopy(vpd->icon_key, OAM, sizeof(OBJATTR) * 128);
+	dmaCopy(vpd->icon_key, (u16*)OAM, sizeof(OBJATTR) * 128);
 }
 
 void ObjFeeder(VISUAL_PLAY* vpd, int num){
 	// 画面左 ９箱
-	for (int i = 0; i < 9; i++) {
-		obj4draw(&vpd->icon_key[4 + i*4], 512 + 0x86, 0, i*16);
+	for (int i = 0; i < OBJ_LEFT9; i++) {
+		obj4draw(&vpd->icon_key[i*4], 512 + 0x86, 0, i*16);
 	}
 	// 入力のあった方向を光らせる
 	if (num >= 0) {
-		obj4draw(&vpd->icon_key[4 + num*4], 512 + 0x83, 0, num*16);
+		obj4draw(&vpd->icon_key[num*4], 512 + 0x83, 0, num*16);
 	}
+}
+
+void UpdateABicon(OBJATTR* attr, int num){
+	num = (SCREEN_HEIGHT - 8 * 1) - 8 * num;
+	attr->attr2 &= 0x0FFF;
+	attr->attr2 |= OBJ_PALETTE(3);
+	objMove(attr, 0, num);
 }
 
 // test
@@ -209,6 +214,7 @@ void DrawKeyFrame(VISUAL_PLAY* vpd, unsigned int y, int flag){
 // 画面左に押しているキーを表示
 // 18 鍵盤 
 void DrawKey(VISUAL_PLAY* vpd, unsigned int y, int flag){
+
 }
 
 // 上から128音程描画確認
@@ -247,7 +253,7 @@ void FlushVram(VISUAL_PLAY* vpd) {
 // バッファからSpriteRAMに書き込み
 void FlushSprite(VISUAL_PLAY* vpd) {
 	// 実際のOBJ情報メモリに書き込み
-	dmaCopy(vpd->icon_key, OAM, sizeof(OBJATTR) * 128);
+	dmaCopy(vpd->icon_key, (u16*)OAM, sizeof(OBJATTR) * 128);
 }
 
 //---------------------------------------------------------------------------------
@@ -294,6 +300,9 @@ int main(void) {
 		} else {
 			ObjFeeder(&vp_data, -1);
 		}
+
+		UpdateABicon(vp_data.icon_ab, sp_data.note18);
+
 		//dprintf("note : %d\n", sp_data.note);
 		//DrawLinesTest(&vp_data);
 		ConvertMem(&vp_data);
