@@ -21,7 +21,8 @@ typedef struct _SOUND_PLAY_ {
 	int snd_duty;		// 0062_XX67 - duty 
 	int snd_time;		// 0062_89AX - snd_time
 	int snd_amp;		// 0062_XXXB - muki
-	int snd_vol;		// 0062_CDEF - init volume
+	int snd_vol;		// 0062_CDEF - init
+	int tune;			// チューニング用
 	BUTTON_INFO b;
 } SOUND_PLAY, *PSOUND_PLAY;
 
