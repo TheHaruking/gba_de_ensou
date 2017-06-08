@@ -18,6 +18,11 @@
 #define OBJ_LEFT9	9
 #define OBJ_MAX		128
 
+// 黒鍵を1に。背景描画に使用（予定）
+const int keycolor_tbl[12] = {
+	0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 
+};
+
 // 映像用データ
 typedef struct _VISUAL_PLAY_ {
 	int			    frame;		// スクロール用カウンタ
@@ -36,12 +41,11 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	int n_ab 	 = 2 * OBJ_LEFT9 * 2;	// 1アイコン2つぶん * AとB
 
 	// パレットに色を設定
-	BG_COLORS[0]  = RGB5( 0, 0, 0);
-	BG_COLORS[1]  = RGB5(31,15, 0);
-	BG_COLORS[2]  = RGB5( 0, 0,31);
-	OBJ_COLORS[0] = RGB5( 0, 0, 0);
-	OBJ_COLORS[1] = RGB5(31,15, 0);
-	OBJ_COLORS[2] = RGB5( 0, 0,31);
+	BG_COLORS[0x00]  = RGB5( 0, 0, 0);
+	BG_COLORS[0x01]  = RGB5(31,15, 0);
+	BG_COLORS[0x02]  = RGB5( 0, 0,31);
+	BG_COLORS[0x10]  = RGB5(13,13,13);
+	BG_COLORS[0x11]  = RGB5( 7, 7, 7);
 	
 	// メモリ初期化
 	vpd->frame  = 0;
@@ -60,7 +64,7 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	vpd->vram[0] = (u8* )malloc(sizeof(u8 ) * n * m);   // (2 * 160 * 480)
 	vpd->icon_all = (OBJATTR*)malloc(sizeof(OBJATTR*) * OBJ_MAX);   // とりあえず、128個分確保しておく
 	vpd->icon_key = &vpd->icon_all[0];		// まずkey
-	vpd->icon_ab  = &vpd->icon_all[n_key];  // key の次に ab
+/*	vpd->icon_ab  = &vpd->icon_all[n_key];  // key の次に ab (未使用)*/
 
 	// 先頭アドレスをセット
 	for (int i = 1; i < m_mem ; i++) {
@@ -267,14 +271,25 @@ void DrawLines(VISUAL_PLAY* vpd, unsigned int y, int flag){
 	int f = vpd->frame;
 	// 上下反転させるため、128 から引いておく
 	y = 128 - (y & 0x7f);
-	// 黒で初期化
-	memset(vpd->mem[f], 0x00, 128);
 
 	// 音程に色をセット
 	if (flag){
 		vpd->mem[f][y] = 0x01;
 	}
 }
+
+// 音の高さデータを色に変換(背景)
+void DrawLinesBack(VISUAL_PLAY* vpd){
+	int f = vpd->frame;
+
+	// 背景色をセット
+	for (int j = 0; j < 10; j++) {
+		for (int i = 0; i < 12; i++) {
+			vpd->mem[f][i + j*12] = (keycolor_tbl[i]) ? 0x11 : 0x10;
+		}
+	}
+}
+
 
 // 上から128音程描画確認
 void DrawLinesTest(VISUAL_PLAY* vpd){
@@ -354,6 +369,7 @@ int main(void) {
 
 		// 映像
 		MoveLine(&vp_data);
+		DrawLinesBack(&vp_data);
 		DrawLines(&vp_data, sp_data.note, halIsAB_hold(&b));
 
 		// 左のアイコン類
