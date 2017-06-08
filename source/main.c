@@ -38,7 +38,7 @@ typedef struct _VISUAL_PLAY_ {
 void InitVisualPlay(VISUAL_PLAY* vpd){
 	int m, n, m_mem, n_mem;
 	int n_key	 = 4 * OBJ_LEFT9;		// 1アイコン4つぶん 
-	int n_ab 	 = 2 * OBJ_LEFT9 * 2;	// 1アイコン2つぶん * AとB
+/*	int n_ab 	 = 2 * OBJ_LEFT9 * 2;	// 1アイコン2つぶん * AとB  (未使用)*/
 
 	// パレットに色を設定
 	BG_COLORS[0x00]  = RGB5( 0, 0, 0);
@@ -64,7 +64,7 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	vpd->vram[0] = (u8* )malloc(sizeof(u8 ) * n * m);   // (2 * 160 * 480)
 	vpd->icon_all = (OBJATTR*)malloc(sizeof(OBJATTR*) * OBJ_MAX);   // とりあえず、128個分確保しておく
 	vpd->icon_key = &vpd->icon_all[0];		// まずkey
-/*	vpd->icon_ab  = &vpd->icon_all[n_key];  // key の次に ab (未使用)*/
+	vpd->icon_ab  = &vpd->icon_all[n_key];  // key の次に ab
 
 	// 先頭アドレスをセット
 	for (int i = 1; i < m_mem ; i++) {
