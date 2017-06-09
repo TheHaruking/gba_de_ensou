@@ -8,6 +8,7 @@
 #include "hal_eightinput.h"
 #include "sound_play.h"
 #include "chr003.h"
+#include "common.h"
 
 
 // 演奏を楽しむ "PLAYモード"
@@ -58,30 +59,18 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	// 各配列メモリ確保
 	// mem[幅480][音程128]
 	// vram[高160][幅480]
-	vpd->mem     = (u8**)malloc(sizeof(u8*) * m_mem);
-	vpd->mem[0]  = (u8* )malloc(sizeof(u8 ) * n_mem * m_mem);
-	vpd->vram    = (u8**)malloc(sizeof(u8*) * m);       // (4 * 160)
-	vpd->vram[0] = (u8* )malloc(sizeof(u8 ) * n * m);   // (2 * 160 * 480)
+	vpd->mem     = (u8**)malloc_arr((void**)vpd->mem,  sizeof(u8), m_mem, n_mem);
+	vpd->vram    = (u8**)malloc_arr((void**)vpd->vram, sizeof(u8), m,     n);
 	vpd->icon_all = (OBJATTR*)malloc(sizeof(OBJATTR*) * OBJ_MAX);   // とりあえず、128個分確保しておく
 	vpd->icon_key = &vpd->icon_all[0];		// まずkey
 	vpd->icon_ab  = &vpd->icon_all[n_key];  // key の次に ab
-
-	// 先頭アドレスをセット
-	for (int i = 1; i < m_mem ; i++) {
-		vpd->mem[i]  = vpd->mem[i-1]  + sizeof(u8) * n_mem;
-	}
-	for (int i = 1; i < m ; i++) {
-		vpd->vram[i] = vpd->vram[i-1] + sizeof(u8) * n;
-	}
 }
 
 void FinishVisualPlay(VISUAL_PLAY* vpd){
 	free(vpd->icon_ab);
 	free(vpd->icon_key);
-	free(vpd->vram[0]);
-	free(vpd->vram);
-	free(vpd->mem[0]);
-	free(vpd->mem);
+	free_arr((void**)vpd->vram);
+	free_arr((void**)vpd->mem);
 }
 
 void objMove(OBJATTR* attr, int x, int y){
@@ -362,7 +351,6 @@ int main(void) {
 
 	// Init Video
 	InitVisualPlay(&vp_data);
-	//testvram(&vp_data);
 	InitGraphic(&vp_data);
 
 	// Sound Init
@@ -371,6 +359,7 @@ int main(void) {
 	REG_SOUNDCNT_H = 2;			// Overall output ratio - Full
 
 	while (1) {
+		// ボタン入力初期化
 		scanKeys();
 		halSetKeys(&b, keysHeld());
 
@@ -383,14 +372,11 @@ int main(void) {
 		DrawLines(&vp_data, sp_data.note, halIsAB_hold(&b));
 
 		// 左のアイコン類
-		ObjFeeder(vp_data.icon_key, 9 - sp_data.vector, halIsKey_hold(&b));
-		ObjFeederAB(vp_data.icon_ab,  9 - sp_data.vector, halIsAB_hold(&b));
+		ObjFeeder(vp_data.icon_key,  9 - sp_data.vector, halIsKey_hold(&b));
+		ObjFeederAB(vp_data.icon_ab, 9 - sp_data.vector, halIsAB_hold(&b));
 
 		// 書き込み処理
-		//dprintf("note : %d\n", sp_data.note);
-		//DrawLinesTest(&vp_data);
 		ConvertMem(&vp_data);
-		//DrawMemTest(&vp_data);
 		FlushVram(&vp_data);
 		FlushSprite(&vp_data);
 
