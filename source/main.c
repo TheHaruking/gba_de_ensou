@@ -281,15 +281,16 @@ void DrawLines(VISUAL_PLAY* vpd, unsigned int y, int flag){
 // 音の高さデータを色に変換(背景)
 void DrawLinesBack(VISUAL_PLAY* vpd){
 	int f = vpd->frame;
+	// とりあえずnote 83
+	int note = 83;
 
 	// 背景色をセット
 	for (int j = 0; j < 10; j++) {
 		for (int i = 0; i < 12; i++) {
-			vpd->mem[f][i + j*12] = (keycolor_tbl[i]) ? 0x11 : 0x10;
+			vpd->mem[f][128 - (i + j*12)] = (keycolor_tbl[i]) ? 0x11 : 0x10;
 		}
 	}
 }
-
 
 // 上から128音程描画確認
 void DrawLinesTest(VISUAL_PLAY* vpd){
@@ -301,8 +302,11 @@ void DrawLinesTest(VISUAL_PLAY* vpd){
 // mem を、実際に描画する際の絵に変換
 void ConvertMem(VISUAL_PLAY* vpd){
 	int n  = vpd->frame;
+	int n2 = n + SCREEN_WIDTH;
+	// 棒出現位置を右に15 ずらす
 	int m  = (n + 15) % 240;
 	int m2 = m + SCREEN_WIDTH;
+
 	// とりあえずnote 83にして即時確認できるように。
 	// 本当は、現在のキーボードのオクターブをみて決めないとダメ
 	int note = 83;
@@ -313,6 +317,12 @@ void ConvertMem(VISUAL_PLAY* vpd){
 	for (int i = 0; i < SCREEN_HEIGHT; i++){
 		vpd->vram[i][m ] = vpd->mem[n][(i >> 3) + note]; 
 		vpd->vram[i][m2] = vpd->mem[n][(i >> 3) + note]; 
+	}
+
+	// 左パネルが汚されるのを防ぐ
+	for (int i = 0; i < SCREEN_HEIGHT; i++){
+		vpd->vram[i][n ] = 0x00; 
+		vpd->vram[i][n2] = 0x00;; 
 	}
 }
 
