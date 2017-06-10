@@ -42,11 +42,8 @@ typedef struct _BUTTON_INFO_ {
 	unsigned int k12_stage;
 } BUTTON_INFO, *PBUTTON_INFO;
 
-extern int  test(BUTTON_INFO* b);
-extern int  inc(int*);
-
 // ボタンの並びを設定。
-extern void halSetKeysSort(BUTTON_INFO* btn, unsigned int x0, unsigned int x1, unsigned int y0, unsigned int y1, unsigned int a, unsigned int b, unsigned int ctr, unsigned int esc);
+extern void halInitKeys(BUTTON_INFO* btn, unsigned int x0, unsigned int x1, unsigned int y0, unsigned int y1, unsigned int a, unsigned int b, unsigned int ctr, unsigned int esc);
 // ボタンを送信。
 extern void halSetKeys(BUTTON_INFO* btn, int src);
 // 1 ~ 16 の 数値を出力。

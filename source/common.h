@@ -7,6 +7,7 @@ extern "C" {
 #endif
 //---------------------------------------------------------------------------------
 
+// 2次元配列を確保・開放
 extern void** malloc_arr(void** adr, int size, int y, int x);
 extern void   free_arr(void** adr);
 

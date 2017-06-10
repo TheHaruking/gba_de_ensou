@@ -28,6 +28,7 @@ const unsigned short freq_tbl[84] = {
 	0x07EC, 0x07ED, 0x07EE, 0x07EF, 
 };
 
+// 使えるか未確認
 void CalcFreqTbl(unsigned short* freq_tbl, int tune){
 	const unsigned int MAX_FREQ  = 0x0800;
 	unsigned int TUNE_FREQ = MAX_FREQ - tune;
@@ -87,21 +88,13 @@ void SoundPlay(SOUND_PLAY* d, BUTTON_INFO* btn) {
 	}
 
 	// メロディ！
-	// 1. AかBを押した瞬間
+	// 1. 十字キーを押しつつ、AかBを押した瞬間
 	// 2. AかBを押しつつ、十字キーを動かした瞬間
 	// 3. AとBの片方離したが、一方が残っている場合
-	if (   (halIsAB(btn)      && halIsKey_hold(btn))
-		|| (halIsAB_hold(btn) && halIsKey(btn)) 
-		|| (halIsAB_diff(btn) && halIsAB_hold(btn)) ) 
+	if (   (halIsKey_hold(btn) && halIsAB(btn))
+		|| (halIsAB_hold(btn)  && halIsKey(btn)) 
+		|| (halIsAB_diff(btn)  && halIsAB_hold(btn)) ) 
 	{
-		/* ***
-		d->vector = 8 - halKey8(btn);
-		// ↖の音程を臨機応変に 2
-		if(halKey8(btn) == 7) {
-			d->vector += (d->high_flag);
-		}
-		*** */
-		
 		// どのボタンで鳴らしているかを記憶しておく。
 		if (halIsAB(btn)) {
 			d->ab_sounding = (halIsAB(btn) & BTN_A) ? 1 : 0;

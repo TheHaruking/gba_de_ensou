@@ -44,12 +44,7 @@ const int num_4_8_tbl[4][8] = {
 	{	6, 7, 0, 1, 2, 3, 4, 5, },
 };
 
-int inc(int* in){
-	*in += 1;
-	return *in;
-}
-
-void halSetKeysSort(BUTTON_INFO* btn, unsigned int x0, unsigned int x1, unsigned int y0, unsigned int y1, unsigned int a, unsigned int b, unsigned int ctr, unsigned int esc) {
+void halInitKeys(BUTTON_INFO* btn, unsigned int x0, unsigned int x1, unsigned int y0, unsigned int y1, unsigned int a, unsigned int b, unsigned int ctr, unsigned int esc) {
 	btn->x0  = x0;
 	btn->x1  = x1;
 	btn->y0  = y0;
@@ -267,8 +262,3 @@ int halIsAxB(BUTTON_INFO* btn){
 int halIsFirstKey( BUTTON_INFO* btn ){
 	 return btn->f_key;
 }
-
-int test( BUTTON_INFO* btn ){
-	return btn->f_key_move;
-}
-
