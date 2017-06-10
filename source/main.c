@@ -54,6 +54,7 @@ void FinishVisualPlay(VISUAL_PLAY* vpd){
 
 void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 	int n_key/*, n_ab*/;
+	int pos_bottom;
 
 	// BGパレットに色を設定 (とりあえず)
 	BG_COLORS[0x00]  = RGB5( 0, 0, 0);
@@ -73,16 +74,18 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 	objReg(&vpd->icon_ab,  oud, n_key);
 
 	// OBJ に データセット
+	// ※下から順に置いていく。
+	pos_bottom = 16 * (OBJ_LEFT9 - 1); // Y : 128
 	for (int i = 0; i < OBJ_LEFT9; i++) {
-		obj2draw(&vpd->icon_ab[i*4  ], 512 + 0x03, 0, i*16);
-		obj2draw(&vpd->icon_ab[i*4+2], 512 + 0x03, 0, i*16+8);
-		obj2pal(&vpd->icon_ab[i*4  ], 2);
-		obj2pal(&vpd->icon_ab[i*4+2], 5);
+		obj2draw(&vpd->icon_ab[i*4    ], 512 + 0x03, 0, pos_bottom - i*16);
+		obj2draw(&vpd->icon_ab[i*4 + 2], 512 + 0x03, 0, pos_bottom - i*16+8);
+		obj2pal(&vpd->icon_ab[i*4    ], 2); // 緑
+		obj2pal(&vpd->icon_ab[i*4 + 2], 5); // 灰
 	}
 
 	// 画面左 ９箱
 	for (int i = 0; i < OBJ_LEFT9; i++) {
-		obj4draw(&vpd->icon_key[i*4], 512 + 0x86, 0, i*16);
+		obj4draw(&vpd->icon_key[i*4], 512 + 0x86, 0, pos_bottom - i*16);
 	}
 }
 
@@ -243,8 +246,8 @@ int main(void) {
 		DrawLines(&vp_data, sp_data.note, halIsAB_hold(&b));
 
 		// 左のアイコン類
-		LightObj(vp_data.icon_key,  9 - sp_data.vector, halIsKey_hold(&b));
-		LightObjAB(vp_data.icon_ab, 9 - sp_data.vector, halIsAB_hold(&b));
+		LightObj(vp_data.icon_key,  sp_data.vector, halIsKey_hold(&b));
+		LightObjAB(vp_data.icon_ab, sp_data.vector, halIsAB_hold(&b));
 
 		// 書き込み処理
 		ConvertMem(&vp_data, &gmd_data);
