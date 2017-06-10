@@ -17,6 +17,7 @@ typedef struct _OBJ_UTILS_ {
 extern void InitObj(OBJ_UTILS* oud);
 extern void FinishObj(OBJ_UTILS* oud);
 
+extern void SetObjChr(OBJ_UTILS* oud, const void* tiles_adr, const void* pal_adr);
 extern void objReg(OBJATTR** attrp, OBJ_UTILS* oud, int n);
 extern void objMove(OBJATTR* attr, int x, int y);
 extern void obj4draw(OBJATTR* attr, int chr, int x, int y);

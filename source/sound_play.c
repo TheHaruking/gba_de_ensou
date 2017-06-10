@@ -114,7 +114,7 @@ static void ChangeNote(SOUND_PLAY* d, BUTTON_INFO* btn) {
 	// 音程
 	if (   (halIsAB(btn)      && halIsKey_hold(btn))
 		|| (halIsAB_hold(btn) && halIsKey(btn)) 
-		|| (halIsAB_diff(btn) && halIsAB_hold(btn)) && halIsKey_hold(btn)) ) 
+		|| (halIsAB_diff(btn) && halIsAB_hold(btn) && halIsKey_hold(btn)) ) 
 	{
 		// どのボタンで鳴らしているかを記憶しておく。
 		if (halIsAB(btn)) {

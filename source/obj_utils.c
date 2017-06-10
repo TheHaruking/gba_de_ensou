@@ -10,6 +10,12 @@ void FinishObj(OBJ_UTILS* oud) {
 	free(oud->obj);
 }
 
+void SetObjChr(OBJ_UTILS* oud, const void* tiles_adr, const void* pal_adr) {
+	// グラフィックデータをメモリへコピー
+	dmaCopy((u16*)tiles_adr, BITMAP_OBJ_BASE_ADR, 8192);
+	dmaCopy((u16*)pal_adr,   OBJ_COLORS,    512);
+}
+
 void objReg(OBJATTR** attrp, OBJ_UTILS* oud, int n){
 	*attrp = &oud->obj[n];
 }
@@ -26,6 +32,7 @@ void objMove(OBJATTR* attr, int x, int y){
 void obj4draw(OBJATTR* attr, int chr, int x, int y){
 	int x2 = x + 8;
 	int y2 = y + 8;
+
 	attr[0].attr0 = OBJ_Y(y ) | OBJ_16_COLOR;
 	attr[0].attr1 = OBJ_X(x ) | 0         | OBJ_VFLIP;
 	attr[0].attr2 = OBJ_CHAR(chr);
@@ -46,6 +53,7 @@ void obj4draw(OBJATTR* attr, int chr, int x, int y){
 // 2まとまりを一度に操作
 void obj2draw(OBJATTR* attr, int chr, int x, int y) {
 	int x2 = x + 8;
+
 	attr[0].attr0 = OBJ_Y(y ) | OBJ_16_COLOR;
 	attr[0].attr1 = OBJ_X(x ) | 0         | OBJ_VFLIP;
 	attr[0].attr2 = OBJ_CHAR(chr);
