@@ -1,4 +1,3 @@
-
 #include <gba.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -257,6 +256,9 @@ int main(void) {
 		// 垂直同期
 		VBlankIntrWait();
 	}
+
+	FinishMode4(&gm_data);
+	FinishObj(&ou_data);
 }
 
 

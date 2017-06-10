@@ -13,7 +13,7 @@ typedef struct _SOUND_PLAY_ {
 	int vector;
 	int note;
 	int note18;
-	int offset;
+	int octave;
 	int ab;
 	int key;
 	int ab_sounding;
