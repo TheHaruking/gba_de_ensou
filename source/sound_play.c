@@ -68,18 +68,14 @@ static void ChangeSnd(SOUND_PLAY* d, BUTTON_INFO* btn) {
 
 	// 音種類 補正
 	switch (d->snd_duty) {
-		case 0x03:
-			d->snd_duty  = 0x00; break;
-		case -1:
-			d->snd_duty  = 0x02; break;
+		case 0x03:	d->snd_duty  = 0x00; break;
+		case -1:	d->snd_duty  = 0x02; break;
 	}
 
 	// オクターブ 補正
 	switch (d->octave) {
-		case  7:
-			d->octave  = 6; break;
-		case -2:
-			d->octave  = -1; break;
+		case  7:	d->octave  =  6; break;
+		case -2:	d->octave  = -1; break;
 	} 
 }
 

@@ -8,7 +8,7 @@
 #include "sound_play.h"
 #include "chr003.h"
 #include "common.h"
-#include "graphic_mode0.h"
+#include "graphic_mode4.h"
 #include "obj_utils.h"
 
 
@@ -35,17 +35,17 @@ typedef struct _VISUAL_PLAY_ {
 
 // 初期化
 void InitVisualPlay(VISUAL_PLAY* vpd){
-	int m_mem, n_mem;	// 確保するメモリの横と縦
+	int x, y;	// 確保するメモリの横と縦
 
 	// メモリ初期化
 	vpd->frame  = 0;
 	vpd->mode_flag = MODE_PLAY;
 
 	// 配列メモリ確保
-	// mem[幅480][音程128]
-	m_mem = SCREEN_WIDTH * 2;
-	n_mem = 128;
-	vpd->mem = (u8**)malloc_arr((void**)vpd->mem,  sizeof(u8), m_mem, n_mem);
+	// mem[幅480][音程128] ... 最低音 0, 最高音 127
+	x = SCREEN_WIDTH * 2;
+	y = 128;
+	vpd->mem = (u8**)malloc_arr((void**)vpd->mem,  sizeof(u8), x, y);
 }
 
 void FinishVisualPlay(VISUAL_PLAY* vpd){
@@ -60,8 +60,16 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 	dmaCopy((u16*)chr003Tiles, CHAR_BASE_BLOCK(3),  chr003TilesLen);
 	dmaCopy((u16*)chr003Tiles, OBJ_BASE_ADR,		chr003TilesLen); // BGでもCHAR_BASE_BLOCK(3)なら512以降で使用可
 	dmaCopy((u16*)chr003Tiles, BITMAP_OBJ_BASE_ADR, chr003TilesLen);
-	dmaCopy((u16*)chr003Pal,   BG_COLORS, 		chr003PalLen);
+//	dmaCopy((u16*)chr003Pal,   BG_COLORS, 		chr003PalLen);
 	dmaCopy((u16*)chr003Pal,   OBJ_COLORS,		chr003PalLen);
+
+	// BGパレットに色を設定 (とりあえず)
+	BG_COLORS[0x00]  = RGB5( 0, 0, 0);
+	BG_COLORS[0x01]  = RGB5(31,15, 0);
+	BG_COLORS[0x02]  = RGB5( 0, 0,31);
+	BG_COLORS[0x10]  = RGB5(13,13,13);
+	BG_COLORS[0x11]  = RGB5( 7, 7, 7);
+
 
 	// obj_utilsが確保したメモリのアドレスをこちらに登録
 	n_key	= 4 * OBJ_LEFT9;		// 1アイコン4つぶん 
@@ -73,15 +81,15 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 	// ※下から順に置いていく。
 	pos_bottom = 16 * (OBJ_LEFT9 - 1); // Y : 128
 	for (int i = 0; i < OBJ_LEFT9; i++) {
-		obj2draw(&vpd->icon_ab[i*4    ], 0x03, 0, pos_bottom - i*16);
-		obj2draw(&vpd->icon_ab[i*4 + 2], 0x03, 0, pos_bottom - i*16+8);
+		obj2draw(&vpd->icon_ab[i*4    ], 512 + 0x03, 0, pos_bottom - i*16);
+		obj2draw(&vpd->icon_ab[i*4 + 2], 512 + 0x03, 0, pos_bottom - i*16+8);
 		obj2pal(&vpd->icon_ab[i*4    ], 2); // 緑
 		obj2pal(&vpd->icon_ab[i*4 + 2], 5); // 灰
 	}
 
 	// 画面左 ９箱
 	for (int i = 0; i < OBJ_LEFT9; i++) {
-		obj4draw(&vpd->icon_key[i*4], 0x86, 0, pos_bottom - i*16);
+		obj4draw(&vpd->icon_key[i*4], 512 + 0x86, 0, pos_bottom - i*16);
 	}
 }
 
@@ -110,12 +118,12 @@ void LightObjAB(OBJATTR* attr, int num, int enable){
 	}
 	// 画面左 ９箱
 	for (int i = 0; i < OBJ_LEFT9; i++) {
-		obj2chr(&attr[i*4  ], 0x00);
-		obj2chr(&attr[i*4+2], 0x00);
+		obj2chr(&attr[i*4  ], 512);
+		obj2chr(&attr[i*4+2], 512);
 	}
 	// 入力のあった方向を光らせる
 	if (num >= 0) {
-		obj2chr(&attr[num*4 + n*2], 0x03);
+		obj2chr(&attr[num*4 + n*2], 512 + 0x03);
 	}
 }
 
@@ -137,10 +145,24 @@ void MoveLine(VISUAL_PLAY* vpd) {
 
 // 音の高さデータを色に変換
 void DrawLines(VISUAL_PLAY* vpd, unsigned int y, int flag){
+	int f = vpd->frame;
+
+	// 音程に色をセット
+	if (flag){
+		vpd->mem[f][y] = 0x01;
+	}
 }
 
 // 音の高さデータを色に変換(背景)
 void DrawLinesBack(VISUAL_PLAY* vpd){
+	int f = vpd->frame;
+
+	// 背景色をセット
+	for (int j = 0; j < 10; j++) {
+		for (int i = 0; i < 12; i++) {
+			vpd->mem[f][i + j*12] = (keycolor_tbl[i]) ? 0x11 : 0x10;
+		}
+	}
 }
 
 // 上から128音程描画確認
@@ -151,9 +173,26 @@ void DrawLinesTest(VISUAL_PLAY* vpd){
 }
 
 // mem を、実際に描画する際の絵に変換
-void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE0* gmd){
-	gmd->vram[0][0][4] = 0x0001;
-	gmd->vram[3][4][4] = 0x00FF;
+void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int note){
+	int n  = vpd->frame;
+	int n2 = n + SCREEN_WIDTH;
+	// 棒出現位置を右に15 ずらす
+	int m  = (n + 15) % 240;
+	int m2 = m + SCREEN_WIDTH;
+
+	// セットした色を、実際の描画サイズ・向きに変換
+	// i >> 3 して、棒を縦8 にしている
+	// m は +15 されていて、棒出現位置を右に15 ずらす役割
+	for (int i = 16*9 - 1; i >= 0; i--){
+		gmd->vram[i][m ] = vpd->mem[n][84 - ((i >> 3) + note)]; 
+		gmd->vram[i][m2] = vpd->mem[n][84 - ((i >> 3) + note)]; 
+	}
+
+	// 左パネルが汚されるのを防ぐ
+	for (int i = 0; i < SCREEN_HEIGHT; i++){
+		gmd->vram[i][n ] = 0x00; 
+		gmd->vram[i][n2] = 0x00;; 
+	}
 }
 
 
@@ -164,19 +203,19 @@ int main(void) {
 //---------------------------------------------------------------------------------
 	BUTTON_INFO  	b;
 	SOUND_PLAY   	sp_data;
-	GRAPHIC_MODE0	gm_data;
+	GRAPHIC_MODE4	gm_data;
 	OBJ_UTILS		ou_data;
 	VISUAL_PLAY  	vp_data;
 
 	// Init
 	irqInit();
 	irqEnable(IRQ_VBLANK);
-	SetMode(0 | BG_ALL_ON | OBJ_ON);
+	SetMode(4 | BG2_ON | OBJ_ON);
 
 	// Init private
 	halInitKeys(&b, 4, 5, 6, 7, 0, 1, 3, 2);
 	InitSoundPlay(&sp_data);
-	InitMode0(&gm_data);
+	InitMode4(&gm_data);
 	InitObj(&ou_data);
 
 	// Init Video
@@ -205,16 +244,16 @@ int main(void) {
 		LightObj(vp_data.icon_key,  sp_data.vector, halIsKey_hold(&b));
 		LightObjAB(vp_data.icon_ab, sp_data.vector, halIsAB_hold(&b));
 
-		// 描画準備
-		ConvertMem(&vp_data, &gm_data);
+		// 書き込み処理
+		ConvertMem(&vp_data, &gm_data, sp_data.octave * 12 + sp_data.key);
 
 		// 垂直同期待機・書き込み
 		VBlankIntrWait();
-		FlushBG(&gm_data);
+		FlushVramOfs(&gm_data, 0, vp_data.frame);
 		FlushSprite(&ou_data);
 	}
 
-	FinishMode0(&gm_data);
+	FinishMode4(&gm_data);
 	FinishObj(&ou_data);
 }
 

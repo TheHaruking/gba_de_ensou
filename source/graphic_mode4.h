@@ -14,7 +14,7 @@ typedef struct _GRAPHIC_MODE4_ {
 extern void InitMode4(GRAPHIC_MODE4* gm4);
 extern void FinishMode4(GRAPHIC_MODE4* gm4);
 extern void FlushVram(GRAPHIC_MODE4* gm4);
-extern void FlushVramOfs(GRAPHIC_MODE4* gm4, int x);
+extern void FlushVramOfs(GRAPHIC_MODE4* gm4, int y, int x);
 extern void testvram(GRAPHIC_MODE4* gm4);
 
 

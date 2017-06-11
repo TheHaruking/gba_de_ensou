@@ -2,11 +2,11 @@
 #include "common.h"
 #include "graphic_mode4.h"
 
-// ひとまず横方向に2面
+// 縦横2倍
 void InitMode4(GRAPHIC_MODE4* gm4){
-	int m = SCREEN_HEIGHT;
-	int n = sizeof(u8) * SCREEN_WIDTH * 2; // 480;
-	gm4->vram = (u8**)malloc_arr((void**)gm4->vram, sizeof(u8), m, n);
+	int y = SCREEN_HEIGHT * 2; // 320
+	int x = SCREEN_WIDTH  * 2; // 480
+	gm4->vram = (u8**)malloc_arr((void**)gm4->vram, sizeof(u8), y, x);
 }
 
 // 
@@ -20,10 +20,10 @@ void FlushVram(GRAPHIC_MODE4* gm4) {
 }
 
 // バッファからVRAMに書き込み
-void FlushVramOfs(GRAPHIC_MODE4* gm4, int x) {
+void FlushVramOfs(GRAPHIC_MODE4* gm4, int y, int x) {
 	unsigned int d = VRAM;
 	// スクロールさせるため、1行ずつ書き込む
-	for (int i = 0; i < SCREEN_HEIGHT; i++) {
+	for (int i = y; i < y + SCREEN_HEIGHT; i++) {
 		dmaCopy((u8*)&gm4->vram[i][x], (u16 *)d, SCREEN_WIDTH);
 		d += sizeof(u8) * SCREEN_WIDTH;
 	}
