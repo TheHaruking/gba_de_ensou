@@ -8,7 +8,7 @@ extern "C" {
 //---------------------------------------------------------------------------------
 
 typedef struct _GRAPHIC_MODE0_ {
-	unsigned char** vram;		// 描画バッファ1
+	unsigned short*** vram;		// 描画バッファ1
 } GRAPHIC_MODE0, *PGRAPHIC_MODE0;
 
 extern void InitMode0(GRAPHIC_MODE0* gmd);

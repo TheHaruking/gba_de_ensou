@@ -5,7 +5,9 @@
 void** malloc_arr(void** adr, int size, int y, int x) {
     adr     = malloc(sizeof(int*) * y);
 	adr[0]  = malloc(size * x * y);
-    // 先頭アドレスをセット
+
+    // 先頭アドレスをセットしていく。
+	// これで配列として使えるように
     for (int i = 1; i < y ; i++) {
 		adr[i]  = adr[i-1] + size * x;
 	}

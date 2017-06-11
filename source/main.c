@@ -56,8 +56,10 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 	int pos_bottom;
 
 	// グラフィックデータをメモリへコピー
-	// dmaCopy((u16*)chr003Tiles, BITMAP_OBJ_BASE_ADR, chr003TilesLen);
-	dmaCopy((u16*)chr003Tiles, OBJ_BASE_ADR,	chr003TilesLen);
+	// 1. BG専用領域,  2. 共用領域,  3. OBJ専用領域
+	dmaCopy((u16*)chr003Tiles, CHAR_BASE_BLOCK(3),  chr003TilesLen);
+	dmaCopy((u16*)chr003Tiles, OBJ_BASE_ADR,		chr003TilesLen); // BGでもCHAR_BASE_BLOCK(3)なら512以降で使用可
+	dmaCopy((u16*)chr003Tiles, BITMAP_OBJ_BASE_ADR, chr003TilesLen);
 	dmaCopy((u16*)chr003Pal,   BG_COLORS, 		chr003PalLen);
 	dmaCopy((u16*)chr003Pal,   OBJ_COLORS,		chr003PalLen);
 
@@ -150,7 +152,8 @@ void DrawLinesTest(VISUAL_PLAY* vpd){
 
 // mem を、実際に描画する際の絵に変換
 void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE0* gmd){
-
+	gmd->vram[0][0][4] = 0x0001;
+	gmd->vram[3][4][4] = 0x00FF;
 }
 
 
@@ -159,11 +162,11 @@ void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE0* gmd){
 //---------------------------------------------------------------------------------
 int main(void) {
 //---------------------------------------------------------------------------------
+	BUTTON_INFO  	b;
 	SOUND_PLAY   	sp_data;
 	GRAPHIC_MODE0	gm_data;
 	OBJ_UTILS		ou_data;
 	VISUAL_PLAY  	vp_data;
-	BUTTON_INFO  	b;
 
 	// Init
 	irqInit();
@@ -207,7 +210,7 @@ int main(void) {
 
 		// 垂直同期待機・書き込み
 		VBlankIntrWait();
-		//FlushBG(&gm_data);
+		FlushBG(&gm_data);
 		FlushSprite(&ou_data);
 	}
 
