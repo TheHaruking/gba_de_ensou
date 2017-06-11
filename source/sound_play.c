@@ -44,7 +44,6 @@ void InitSoundPlay(SOUND_PLAY* d) {
 	d->note	    	= 0;
 	d->octave		= 2;
 	d->key 		    = 4;
-	d->ab 			= 0;
 	d->ab_sounding  = 0;
 	d->high_flag	= 0;
 	d->snd_duty	    = 2;
@@ -76,15 +75,16 @@ static void ChangeSnd(SOUND_PLAY* d, BUTTON_INFO* btn) {
 	switch (d->octave) {
 		case  7:	d->octave  =  6; break;
 		case -2:	d->octave  = -1; break;
-	} 
-}
+	}
 
-static void ChangeKey(SOUND_PLAY* d, BUTTON_INFO* btn) {
 	// 先に十字キー押しながら START で、
 	// キー を 12通りに変更 (左回り)
 	if (halKeyCtr12(btn) >= 0) {
 		d->key = 11 - halKeyCtr12(btn);
 	}
+
+	// オフセット値確定
+	d->ofs    = (d->octave * 12) + d->key;
 }
 
 static void ChangeNote(SOUND_PLAY* d, BUTTON_INFO* btn) {
@@ -122,7 +122,7 @@ static void ChangeNote(SOUND_PLAY* d, BUTTON_INFO* btn) {
 
 		// 音程計算
 		d->note18 = (d->vector * 2) + d->ab_sounding;
-		d->note   = (d->octave * 12) + d->key + d->note18;	
+		d->note   = d->ofs + d->note18;	
 	}
 }
 
@@ -180,7 +180,6 @@ static void MelodyEnd(SOUND_PLAY* d, BUTTON_INFO* btn){
 void SoundPlay(SOUND_PLAY* d, BUTTON_INFO* btn) {
 	// 音程、音種類 など変更
 	ChangeSnd(d, btn);
-	ChangeKey(d, btn);
 	ChangeNote(d, btn);
 
 	// 鳴らす(鳴り終わらせる)

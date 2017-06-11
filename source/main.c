@@ -27,6 +27,8 @@ const int keycolor_tbl[12] = {
 // 映像用データ
 typedef struct _VISUAL_PLAY_ {
 	int			    frame;		// スクロール用カウンタ
+	int				height;		// 高さ
+	int				height_view;		// 表示中の高さ
 	unsigned char** mem;		// 色保存
 	int				mode_flag;	// "演奏モード" or "楽譜モード"
 	OBJATTR*		icon_key;		// 左のアイコン
@@ -39,6 +41,7 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 
 	// メモリ初期化
 	vpd->frame  = 0;
+	vpd->height = 28 * 8;
 	vpd->mode_flag = MODE_PLAY;
 
 	// 配列メモリ確保
@@ -66,7 +69,7 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 	// BGパレットに色を設定 (とりあえず)
 	BG_COLORS[0x00]  = RGB5( 0, 0, 0);
 	BG_COLORS[0x01]  = RGB5(31,15, 0);
-	BG_COLORS[0x02]  = RGB5( 0, 0,31);
+	BG_COLORS[0x02]  = RGB5(31,21, 8);
 	BG_COLORS[0x10]  = RGB5(13,13,13);
 	BG_COLORS[0x11]  = RGB5( 7, 7, 7);
 
@@ -143,13 +146,26 @@ void MoveLine(VISUAL_PLAY* vpd) {
 	}
 }
 
+void MoveHeight(VISUAL_PLAY* vpd, int ofs) {
+	int dst  = ofs * 8;
+	int diff = dst - vpd->height;
+	if (abs(diff) > 1) {
+		vpd->height += diff >> 3;
+	} else {
+		vpd->height = dst;
+	}
+	vpd->height_view = 159 - (vpd->height) % 160;
+	dprintf("height : %d\n", vpd->height);
+	dprintf("ofs    : %d\n", ofs);
+}
+
 // 音の高さデータを色に変換
 void DrawLines(VISUAL_PLAY* vpd, unsigned int y, int flag){
 	int f = vpd->frame;
 
 	// 音程に色をセット
 	if (flag){
-		vpd->mem[f][y] = 0x01;
+		vpd->mem[f][y] = (keycolor_tbl[y % 12]) ? 0x01 : 0x02;
 	}
 }
 
@@ -173,7 +189,7 @@ void DrawLinesTest(VISUAL_PLAY* vpd){
 }
 
 // mem を、実際に描画する際の絵に変換
-void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int note){
+void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 	int n  = vpd->frame;
 	int n2 = n + SCREEN_WIDTH;
 	// 棒出現位置を右に15 ずらす
@@ -183,9 +199,10 @@ void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int note){
 	// セットした色を、実際の描画サイズ・向きに変換
 	// i >> 3 して、棒を縦8 にしている
 	// m は +15 されていて、棒出現位置を右に15 ずらす役割
-	for (int i = 16*9 - 1; i >= 0; i--){
-		gmd->vram[i][m ] = vpd->mem[n][84 - ((i >> 3) + note)]; 
-		gmd->vram[i][m2] = vpd->mem[n][84 - ((i >> 3) + note)]; 
+	int bottom_line = 16 * OBJ_LEFT9 - 1;
+	for (int i = 0; i <= bottom_line; i++){
+		gmd->vram[bottom_line - i][m ] = vpd->mem[n][ofs + (i >> 3)]; 
+		gmd->vram[bottom_line - i][m2] = vpd->mem[n][ofs + (i >> 3)]; 
 	}
 
 	// 左パネルが汚されるのを防ぐ
@@ -237,6 +254,7 @@ int main(void) {
 
 		// 映像
 		MoveLine(&vp_data);
+		MoveHeight(&vp_data, sp_data.ofs);
 		DrawLinesBack(&vp_data);
 		DrawLines(&vp_data, sp_data.note, halIsAB_hold(&b));
 
@@ -245,11 +263,11 @@ int main(void) {
 		LightObjAB(vp_data.icon_ab, sp_data.vector, halIsAB_hold(&b));
 
 		// 書き込み処理
-		ConvertMem(&vp_data, &gm_data, sp_data.octave * 12 + sp_data.key);
+		ConvertMem(&vp_data, &gm_data, sp_data.ofs);
 
 		// 垂直同期待機・書き込み
 		VBlankIntrWait();
-		FlushVramOfs(&gm_data, 0, vp_data.frame);
+		FlushVramOfs(&gm_data, vp_data.height_view, vp_data.frame);
 		FlushSprite(&ou_data);
 	}
 

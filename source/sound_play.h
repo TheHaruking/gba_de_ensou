@@ -9,20 +9,22 @@ extern "C" {
 #include "hal_eightinput.h"
 
 typedef struct _SOUND_PLAY_ {
-    int count;
-	int vector;
-	int note;
-	int note18;
-	int octave;
-	int ab;
-	int key;
-	int ab_sounding;
-	int high_flag;
+	// 音高
+	int note;			// 最終音階
+	int vector;			// 入力値
+	int octave;			// オクターブ
+	int key;			// 調 (0 ～ 11)
+	int ab_sounding;	// a なら 1
+	int high_flag;		// ↖のとき、高くするか低くするか
+	int tune;			// チューニング用
+	// Visual Play で使う
+	int note18;			// vector * 2 + ab
+	int ofs;			// octave * 12 + key
+	// 音質
 	int snd_duty;		// 0062_XX67 - duty 
 	int snd_time;		// 0062_89AX - snd_time
 	int snd_amp;		// 0062_XXXB - muki
 	int snd_vol;		// 0062_CDEF - init
-	int tune;			// チューニング用
 	BUTTON_INFO b;
 } SOUND_PLAY, *PSOUND_PLAY;
 
