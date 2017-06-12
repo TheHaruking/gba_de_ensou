@@ -29,7 +29,6 @@ typedef struct _VISUAL_PLAY_ {
 	int			    frame;		// スクロール用カウンタ
 	int				height;		// 高さ
 	int				height_view;		// 表示中の高さ
-	int				ofs;		// 調整
 	unsigned char** mem;		// 色保存
 	int				mode_flag;	// "演奏モード" or "楽譜モード"
 	OBJATTR*		icon_key;		// 左のアイコン
@@ -43,7 +42,6 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	// メモリ初期化
 	vpd->frame  = 0;
 	vpd->height = 28 * 8;
-	vpd->ofs	= 28 + 12;
 	vpd->mode_flag = MODE_PLAY;
 
 	// 配列メモリ確保
@@ -154,7 +152,7 @@ void MoveHeight(VISUAL_PLAY* vpd, int ofs) {
 	if (abs(diff) > 1) {
 		vpd->height += (diff >> 3) + SGN(diff);
 	} else {
-		vpd->height = dst;
+		vpd->height  = dst;
 	}
 	vpd->height_view = 160 - DivMod(vpd->height, 160);
 	dprintf("dist   : %d\n", vpd->height);
@@ -222,7 +220,7 @@ void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 		gmd->vram[y_ofs ][n ] = 0x00; 
 		gmd->vram[y_ofs ][n2] = 0x00;
 		gmd->vram[y_ofs2][n ] = 0x00; 
-		gmd->vram[y_ofs2][n2] = 0x00;; 
+		gmd->vram[y_ofs2][n2] = 0x00; 
 	}
 }
 
