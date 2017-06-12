@@ -29,6 +29,7 @@ typedef struct _VISUAL_PLAY_ {
 	int			    frame;		// スクロール用カウンタ
 	int				height;		// 高さ
 	int				height_view;		// 表示中の高さ
+	int				ofs;		// 調整
 	unsigned char** mem;		// 色保存
 	int				mode_flag;	// "演奏モード" or "楽譜モード"
 	OBJATTR*		icon_key;		// 左のアイコン
@@ -42,6 +43,7 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	// メモリ初期化
 	vpd->frame  = 0;
 	vpd->height = 28 * 8;
+	vpd->ofs	= 28 + 12;
 	vpd->mode_flag = MODE_PLAY;
 
 	// 配列メモリ確保
@@ -150,11 +152,13 @@ void MoveHeight(VISUAL_PLAY* vpd, int ofs) {
 	int dst  = ofs * 8;
 	int diff = dst - vpd->height;
 	if (abs(diff) > 1) {
-		vpd->height += diff >> 3;
+		vpd->height += (diff >> 3) + SGN(diff);
 	} else {
 		vpd->height = dst;
 	}
-	vpd->height_view = 159 - (vpd->height) % 160;
+	vpd->height_view = 160 - DivMod(vpd->height, 160);
+	dprintf("dist   : %d\n", vpd->height);
+	dprintf("diff   : %d\n", diff);
 	dprintf("height : %d\n", vpd->height);
 	dprintf("ofs    : %d\n", ofs);
 }
@@ -200,15 +204,25 @@ void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 	// i >> 3 して、棒を縦8 にしている
 	// m は +15 されていて、棒出現位置を右に15 ずらす役割
 	int bottom_line = 16 * OBJ_LEFT9 - 1;
+	int y_ofs, y_ofs2, temp;
 	for (int i = 0; i <= bottom_line; i++){
-		gmd->vram[bottom_line - i][m ] = vpd->mem[n][ofs + (i >> 3)]; 
-		gmd->vram[bottom_line - i][m2] = vpd->mem[n][ofs + (i >> 3)]; 
+		y_ofs  = DivMod(bottom_line - i + vpd->height_view, 160);
+		y_ofs2 = y_ofs + 160;
+		temp = (ofs) + (i >> 3);
+		gmd->vram[y_ofs ][m ] = vpd->mem[n][temp]; 
+		gmd->vram[y_ofs ][m2] = vpd->mem[n][temp]; 
+		gmd->vram[y_ofs2][m ] = vpd->mem[n][temp]; 
+		gmd->vram[y_ofs2][m2] = vpd->mem[n][temp]; 
 	}
 
 	// 左パネルが汚されるのを防ぐ
 	for (int i = 0; i < SCREEN_HEIGHT; i++){
-		gmd->vram[i][n ] = 0x00; 
-		gmd->vram[i][n2] = 0x00;; 
+		y_ofs = DivMod(bottom_line - i + vpd->height_view, 160);
+		y_ofs2 = y_ofs + 160;
+		gmd->vram[y_ofs ][n ] = 0x00; 
+		gmd->vram[y_ofs ][n2] = 0x00;
+		gmd->vram[y_ofs2][n ] = 0x00; 
+		gmd->vram[y_ofs2][n2] = 0x00;; 
 	}
 }
 
