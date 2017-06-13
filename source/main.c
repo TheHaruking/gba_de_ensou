@@ -29,6 +29,7 @@ typedef struct _VISUAL_PLAY_ {
 	int			    frame;		// スクロール用カウンタ
 	int				height;		// 高さ
 	int				height_view;		// 表示中の高さ
+	int				height_spd; // 移動中の速さ
 	unsigned char** mem;		// 色保存
 	int				mode_flag;	// "演奏モード" or "楽譜モード"
 	OBJATTR*		icon_key;		// 左のアイコン
@@ -146,12 +147,15 @@ void MoveLine(VISUAL_PLAY* vpd) {
 	}
 }
 
+// 途中
 void MoveHeight(VISUAL_PLAY* vpd, int ofs) {
 	int dst  = ofs * 8;
 	int diff = dst - vpd->height;
 	if (abs(diff) > 1) {
-		vpd->height += (diff >> 3) + SGN(diff);
+		vpd->height_spd = (diff >> 3) + SGN(diff);
+		vpd->height += vpd->height_spd;
 	} else {
+		vpd->height_spd = 0;
 		vpd->height  = dst;
 	}
 	vpd->height_view = 160 - DivMod(vpd->height, 160);
@@ -167,14 +171,13 @@ void DrawLines(VISUAL_PLAY* vpd, unsigned int y, int flag){
 
 	// 音程に色をセット
 	if (flag){
-		vpd->mem[f][y] = (keycolor_tbl[y % 12]) ? 0x01 : 0x02;
+		vpd->mem[f][y] = (keycolor_tbl[DivMod(y, 12)]) ? 0x01 : 0x02;
 	}
 }
 
 // 音の高さデータを色に変換(背景)
 void DrawLinesBack(VISUAL_PLAY* vpd){
 	int f = vpd->frame;
-
 	// 背景色をセット
 	for (int j = 0; j < 10; j++) {
 		for (int i = 0; i < 12; i++) {
@@ -195,18 +198,20 @@ void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 	int n  = vpd->frame;
 	int n2 = n + SCREEN_WIDTH;
 	// 棒出現位置を右に15 ずらす
-	int m  = (n + 15) % 240;
+	int m  = DivMod(n + 15, 240);
 	int m2 = m + SCREEN_WIDTH;
 
 	// セットした色を、実際の描画サイズ・向きに変換
 	// i >> 3 して、棒を縦8 にしている
 	// m は +15 されていて、棒出現位置を右に15 ずらす役割
-	int bottom_line = 16 * OBJ_LEFT9 - 1;
+	int bottom_line = 16 * 10 - 1;
 	int y_ofs, y_ofs2, temp;
 	for (int i = 0; i <= bottom_line; i++){
-		y_ofs  = DivMod(bottom_line - i + vpd->height_view, 160);
+	//	y_ofs  = DivMod(bottom_line - i + vpd->height_view, 160);
+		y_ofs  = bottom_line - i;
 		y_ofs2 = y_ofs + 160;
-		temp = (ofs) + (i >> 3);
+	//	temp = (ofs) + (i >> 3);
+		temp = (i >> 3);
 		gmd->vram[y_ofs ][m ] = vpd->mem[n][temp]; 
 		gmd->vram[y_ofs ][m2] = vpd->mem[n][temp]; 
 		gmd->vram[y_ofs2][m ] = vpd->mem[n][temp]; 
@@ -214,13 +219,33 @@ void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 	}
 
 	// 左パネルが汚されるのを防ぐ
-	for (int i = 0; i < SCREEN_HEIGHT; i++){
+	for (int i = 16; i < SCREEN_HEIGHT; i++){
 		y_ofs = DivMod(bottom_line - i + vpd->height_view, 160);
 		y_ofs2 = y_ofs + 160;
 		gmd->vram[y_ofs ][n ] = 0x00; 
 		gmd->vram[y_ofs ][n2] = 0x00;
 		gmd->vram[y_ofs2][n ] = 0x00; 
 		gmd->vram[y_ofs2][n2] = 0x00; 
+	}
+}
+
+void ConvertMem_Scrolling(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
+	// 移動中でなければ帰る
+	if (!vpd->height_spd)
+		return;
+
+	int temp;
+	int n = vpd->frame;
+	int x, x2, y, y2;
+	
+	for (int i = 0; i <= SCREEN_WIDTH; i++){
+		temp = (i >> 3);
+		x = 100; x2 = x + 240;
+		y = 100; y2 = y + 160;
+		gmd->vram[y ][x ] = vpd->mem[i][80]; 
+		gmd->vram[y ][x2] = vpd->mem[i][80]; 
+		gmd->vram[y2][x ] = vpd->mem[i][80]; 
+		gmd->vram[y2][x2] = vpd->mem[i][80]; 
 	}
 }
 
@@ -274,8 +299,9 @@ int main(void) {
 		LightObj(vp_data.icon_key,  sp_data.vector, halIsKey_hold(&b));
 		LightObjAB(vp_data.icon_ab, sp_data.vector, halIsAB_hold(&b));
 
-		// 書き込み処理
+		// 変換処理
 		ConvertMem(&vp_data, &gm_data, sp_data.ofs);
+		ConvertMem_Scrolling(&vp_data, &gm_data, sp_data.ofs);
 
 		// 垂直同期待機・書き込み
 		VBlankIntrWait();
