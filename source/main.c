@@ -42,14 +42,23 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 
 	// メモリ初期化
 	vpd->frame  = 0;
-	vpd->height = 28 * 8;
+	vpd->height = 0;
 	vpd->mode_flag = MODE_PLAY;
 
 	// 配列メモリ確保
-	// mem[幅480][音程128] ... 最低音 0, 最高音 127
+	// mem[音程100][幅480] ... 最低音 0, 最高音 127
 	x = SCREEN_WIDTH * 2;
-	y = 128;
-	vpd->mem = (u8**)malloc_arr((void**)vpd->mem,  sizeof(u8), x, y);
+	y = 100;
+	vpd->mem = (u8**)malloc_arr((void**)vpd->mem,  sizeof(u8), y, x);
+
+	// 真っ黒部分
+	for (int i = 0; i < 12; i++) {
+		memset(vpd->mem[i], 0x00, 480);
+	}
+	for (int i = 96; i <= 100; i++) {
+		memset(vpd->mem[i], 0x01, 480);
+	}
+
 }
 
 void FinishVisualPlay(VISUAL_PLAY* vpd){
@@ -149,8 +158,9 @@ void MoveLine(VISUAL_PLAY* vpd) {
 
 // 途中
 void MoveHeight(VISUAL_PLAY* vpd, int ofs) {
-	int dst  = ofs * 8;
-	int diff = dst - vpd->height;
+	int dst  = (ofs + 12) * 8; 		// 最低-12になるので、補正
+	int diff = dst - vpd->height;	
+	// ヌルっとスクロール
 	if (abs(diff) > 1) {
 		vpd->height_spd = (diff >> 3) + SGN(diff);
 		vpd->height += vpd->height_spd;
@@ -158,7 +168,8 @@ void MoveHeight(VISUAL_PLAY* vpd, int ofs) {
 		vpd->height_spd = 0;
 		vpd->height  = dst;
 	}
-	vpd->height_view = 160 - DivMod(vpd->height, 160);
+	// 表示位置確定
+	vpd->height_view = 160 - DivMod(vpd->height - 16, 160); // 下の空白が16
 	dprintf("dist   : %d\n", vpd->height);
 	dprintf("diff   : %d\n", diff);
 	dprintf("height : %d\n", vpd->height);
@@ -167,11 +178,16 @@ void MoveHeight(VISUAL_PLAY* vpd, int ofs) {
 
 // 音の高さデータを色に変換
 void DrawLines(VISUAL_PLAY* vpd, unsigned int y, int flag){
+	// 範囲外のとき逃げる
+	if ((y < 0) || (y >= 84))
+		return;
+
 	int f = vpd->frame;
+	y += 12; // 補正
 
 	// 音程に色をセット
 	if (flag){
-		vpd->mem[f][y] = (keycolor_tbl[DivMod(y, 12)]) ? 0x01 : 0x02;
+		vpd->mem[y][f] = (keycolor_tbl[DivMod(y, 12)]) ? 0x01 : 0x02;
 	}
 }
 
@@ -179,73 +195,64 @@ void DrawLines(VISUAL_PLAY* vpd, unsigned int y, int flag){
 void DrawLinesBack(VISUAL_PLAY* vpd){
 	int f = vpd->frame;
 	// 背景色をセット
-	for (int j = 0; j < 10; j++) {
+	for (int j = 1; j < 7; j++) {
 		for (int i = 0; i < 12; i++) {
-			vpd->mem[f][i + j*12] = (keycolor_tbl[i]) ? 0x11 : 0x10;
+			vpd->mem[i + j*12][f] = (keycolor_tbl[i]) ? 0x11 : 0x10;
 		}
 	}
 }
 
-// 上から128音程描画確認
-void DrawLinesTest(VISUAL_PLAY* vpd){
-	int f = vpd->frame;
-	u16* dest = (u16*)(VRAM + SCREEN_WIDTH * 2 * f);
-	dmaCopy((u16*)vpd->mem[f], (u16*)dest, 128);
-}
-
 // mem を、実際に描画する際の絵に変換
 void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
-	int n  = vpd->frame;
-	int n2 = n + SCREEN_WIDTH;
+	int f  = vpd->frame;
+	int f2 = f + SCREEN_WIDTH;
 	// 棒出現位置を右に15 ずらす
-	int m  = DivMod(n + 15, 240);
+	int m  = DivMod(f + 15, 240);
 	int m2 = m + SCREEN_WIDTH;
 
 	// セットした色を、実際の描画サイズ・向きに変換
 	// i >> 3 して、棒を縦8 にしている
 	// m は +15 されていて、棒出現位置を右に15 ずらす役割
 	int bottom_line = 16 * 10 - 1;
-	int y_ofs, y_ofs2, temp;
+	int y_ofs, y_ofs2, i_div8;
 	for (int i = 0; i <= bottom_line; i++){
 	//	y_ofs  = DivMod(bottom_line - i + vpd->height_view, 160);
 		y_ofs  = bottom_line - i;
 		y_ofs2 = y_ofs + 160;
-	//	temp = (ofs) + (i >> 3);
-		temp = (i >> 3);
-		gmd->vram[y_ofs ][m ] = vpd->mem[n][temp]; 
-		gmd->vram[y_ofs ][m2] = vpd->mem[n][temp]; 
-		gmd->vram[y_ofs2][m ] = vpd->mem[n][temp]; 
-		gmd->vram[y_ofs2][m2] = vpd->mem[n][temp]; 
+	//	i_8 = (ofs) + (i >> 3);
+		i_div8 = (i >> 3);
+		gmd->vram[y_ofs ][m ] = vpd->mem[i_div8][f]; 
+		gmd->vram[y_ofs ][m2] = vpd->mem[i_div8][f]; 
+		gmd->vram[y_ofs2][m ] = vpd->mem[i_div8][f]; 
+		gmd->vram[y_ofs2][m2] = vpd->mem[i_div8][f]; 
 	}
 
 	// 左パネルが汚されるのを防ぐ
 	for (int i = 16; i < SCREEN_HEIGHT; i++){
 		y_ofs = DivMod(bottom_line - i + vpd->height_view, 160);
 		y_ofs2 = y_ofs + 160;
-		gmd->vram[y_ofs ][n ] = 0x00; 
-		gmd->vram[y_ofs ][n2] = 0x00;
-		gmd->vram[y_ofs2][n ] = 0x00; 
-		gmd->vram[y_ofs2][n2] = 0x00; 
+		gmd->vram[y_ofs ][f ] = 0x00; 
+		gmd->vram[y_ofs ][f2] = 0x00;
+		gmd->vram[y_ofs2][f ] = 0x00; 
+		gmd->vram[y_ofs2][f2] = 0x00; 
 	}
 }
 
+
+u16 ttest[480]; // オレンジで確認
 void ConvertMem_Scrolling(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 	// 移動中でなければ帰る
 	if (!vpd->height_spd)
 		return;
 
-	int temp;
-	int n = vpd->frame;
-	int x, x2, y, y2;
-	
-	for (int i = 0; i <= SCREEN_WIDTH; i++){
-		temp = (i >> 3);
-		x = 100; x2 = x + 240;
-		y = 100; y2 = y + 160;
-		gmd->vram[y ][x ] = vpd->mem[i][80]; 
-		gmd->vram[y ][x2] = vpd->mem[i][80]; 
-		gmd->vram[y2][x ] = vpd->mem[i][80]; 
-		gmd->vram[y2][x2] = vpd->mem[i][80]; 
+	memset(ttest, 0x01, 480);
+
+	int y, y2;
+	for (int j = 0; j < abs(vpd->height_spd); j++) {
+		y  = DivMod(800 - vpd->height - j, SCREEN_HEIGHT); 
+		y2 = y + 160;
+		dmaCopy(ttest/*(u16*)vpd->mem[vpd->height + OBJ_LEFT9 * 16]*/, (u16*)gmd->vram[y ], 480);
+		dmaCopy(ttest/*(u16*)vpd->mem[vpd->height + OBJ_LEFT9 * 16]*/, (u16*)gmd->vram[y2], 480);
 	}
 }
 
@@ -275,6 +282,10 @@ int main(void) {
 	// Init Video
 	InitVisualPlay(&vp_data);
 	InitGraphic(&vp_data, &ou_data);
+
+	// Test
+	sp_data.octave = -1;
+	sp_data.key    = 0;
 
 	// Sound Init
 	REG_SOUNDCNT_X = 0x80;		// turn on sound circuit
