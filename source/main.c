@@ -213,14 +213,13 @@ void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 	// セットした色を、実際の描画サイズ・向きに変換
 	// i >> 3 して、棒を縦8 にしている
 	// m は +15 されていて、棒出現位置を右に15 ずらす役割
-	int bottom_line = 16 * 10 - 1;
+	int bottom_line = (ofs + 12) << 3;
 	int y_ofs, y_ofs2, i_div8;
-	for (int i = 0; i <= bottom_line; i++){
+	for (int i = 0; i < SCREEN_HEIGHT; i++){
 	//	y_ofs  = DivMod(bottom_line - i + vpd->height_view, 160);
-		y_ofs  = bottom_line - i;
-		y_ofs2 = y_ofs + 160;
-	//	i_8 = (ofs) + (i >> 3);
-		i_div8 = (i >> 3);
+		y_ofs  = SCREEN_HEIGHT - DivMod(bottom_line + i, SCREEN_HEIGHT);
+		y_ofs2 = y_ofs + SCREEN_HEIGHT;
+		i_div8 = (ofs + 12) + (i >> 3);
 		gmd->vram[y_ofs ][m ] = vpd->mem[i_div8][f]; 
 		gmd->vram[y_ofs ][m2] = vpd->mem[i_div8][f]; 
 		gmd->vram[y_ofs2][m ] = vpd->mem[i_div8][f]; 
@@ -228,6 +227,7 @@ void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 	}
 
 	// 左パネルが汚されるのを防ぐ
+	// ※後でwindow機能に置き換え予定
 	for (int i = 16; i < SCREEN_HEIGHT; i++){
 		y_ofs = DivMod(bottom_line - i + vpd->height_view, 160);
 		y_ofs2 = y_ofs + 160;
