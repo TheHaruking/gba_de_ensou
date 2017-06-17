@@ -49,9 +49,9 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	vpd->mode_flag = MODE_PLAY;
 
 	// 配列メモリ確保
-	// mem[音程100][幅480] ... 最低音 0, 最高音 127
+	// mem[音程128][幅480] ... 最低音 0, 最高音 127
 	x = SCREEN_WIDTH * 2;
-	y = 100 + 1;
+	y = 128;
 	vpd->mem = (u8**)malloc_arr((void**)vpd->mem,  sizeof(u8), y, x);
 
 	vpd->testArray = (u8*)malloc(sizeof(u8) * 480);
@@ -101,11 +101,18 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 		obj4draw(&vpd->icon_key[i*4], 512 + 0x86, 0, pos_bottom - i*16);
 	}
 
+	// 画面←アイコン領域に、描画されないように
+	SetMode_add( WIN0_ENABLE | WIN1_ENABLE );
+	REG_WININ	= WININ_0(OBJ_ENABLE) | WININ_1(OBJ_ENABLE);	// 内側 : OBJ
+	REG_WINOUT	= WINOUT(BG2_ENABLE);							// 外側 : メイン画面
+	SetWIN0(0, 0, 16, 144);
+	SetWIN1(0, 144, 240, 160);
+
 	// 真っ黒部分
-	for (int i = 0; i < 12; i++) {
+	for (int i = 0; i <= 11; i++) {
 		memset(vpd->mem[i], 0x00, 480);
 	}
-	for (int i = 96; i <= 100; i++) {
+	for (int i = 96; i <= 127; i++) {
 		memset(vpd->mem[i], 0x01, 480);
 	}
 
@@ -176,7 +183,7 @@ void MoveHeight(VISUAL_PLAY* vpd, int ofs) {
 		vpd->height  = dst;
 	}
 	// 表示位置確定
-	vpd->height_view = 160 - DivMod(vpd->height - 16, 160); // 下の空白が16
+	vpd->height_view = 160 - DivMod(vpd->height - 16, 160) + 1; // 下の空白が16
 	dprintf("dist   : %d\n", vpd->height);
 	dprintf("diff   : %d\n", diff);
 	dprintf("height : %d\n", vpd->height);
@@ -233,17 +240,6 @@ void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 		gmd->vram[y_ofs ][m2] = vpd->mem[i_div8][f]; 
 		gmd->vram[y_ofs2][m ] = vpd->mem[i_div8][f]; 
 		gmd->vram[y_ofs2][m2] = vpd->mem[i_div8][f]; 
-	}
-
-	// 左パネルが汚されるのを防ぐ
-	// ※後でwindow機能に置き換え予定
-	for (int i = 16; i < SCREEN_HEIGHT; i++){
-		y_ofs = DivMod(bottom_line - i + vpd->height_view, 160);
-		y_ofs2 = y_ofs + 160;
-		gmd->vram[y_ofs ][f ] = 0x00; 
-		gmd->vram[y_ofs ][f2] = 0x00;
-		gmd->vram[y_ofs2][f ] = 0x00; 
-		gmd->vram[y_ofs2][f2] = 0x00; 
 	}
 }
 

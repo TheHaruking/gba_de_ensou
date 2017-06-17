@@ -19,3 +19,15 @@ void free_arr(void** adr) {
 	free(adr[0]);
 	free(adr);
 }
+
+
+// Window
+void SetWIN0(int x, int y, int x2, int y2){
+	REG_WIN0H	= WIN_LEFT(x) | WIN_RIGHT(x2);
+	REG_WIN0V	= WIN_TOP(y)  | WIN_BOTTOM(y2);
+}
+
+void SetWIN1(int x, int y, int x2, int y2){
+	REG_WIN1H	= WIN_LEFT(x) | WIN_RIGHT(x2);
+	REG_WIN1V	= WIN_TOP(y)  | WIN_BOTTOM(y2);
+}
