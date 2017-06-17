@@ -34,6 +34,9 @@ typedef struct _VISUAL_PLAY_ {
 	int				mode_flag;	// "演奏モード" or "楽譜モード"
 	OBJATTR*		icon_key;		// 左のアイコン
 	OBJATTR*		icon_ab;		// AB押したときのアイコン
+
+	// test用ポインタ
+	u8* testArray;
 } VISUAL_PLAY, *PVISUAL_PLAY;
 
 // 初期化
@@ -48,17 +51,10 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	// 配列メモリ確保
 	// mem[音程100][幅480] ... 最低音 0, 最高音 127
 	x = SCREEN_WIDTH * 2;
-	y = 100;
+	y = 100 + 1;
 	vpd->mem = (u8**)malloc_arr((void**)vpd->mem,  sizeof(u8), y, x);
 
-	// 真っ黒部分
-	for (int i = 0; i < 12; i++) {
-		memset(vpd->mem[i], 0x00, 480);
-	}
-	for (int i = 96; i <= 100; i++) {
-		memset(vpd->mem[i], 0x01, 480);
-	}
-
+	vpd->testArray = (u8*)malloc(sizeof(u8) * 480);
 }
 
 void FinishVisualPlay(VISUAL_PLAY* vpd){
@@ -104,6 +100,17 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 	for (int i = 0; i < OBJ_LEFT9; i++) {
 		obj4draw(&vpd->icon_key[i*4], 512 + 0x86, 0, pos_bottom - i*16);
 	}
+
+	// 真っ黒部分
+	for (int i = 0; i < 12; i++) {
+		memset(vpd->mem[i], 0x00, 480);
+	}
+	for (int i = 96; i <= 100; i++) {
+		memset(vpd->mem[i], 0x01, 480);
+	}
+
+	// test
+	memset(vpd->testArray, 0x01, 480);
 }
 
 void LightObj(OBJATTR* attr, int num, int enable){
@@ -182,12 +189,14 @@ void DrawLines(VISUAL_PLAY* vpd, unsigned int y, int flag){
 	if ((y < 0) || (y >= 84))
 		return;
 
-	int f = vpd->frame;
+	int f  = vpd->frame;
+	int f2 = f + SCREEN_WIDTH;
 	y += 12; // 補正
 
 	// 音程に色をセット
 	if (flag){
-		vpd->mem[y][f] = (keycolor_tbl[DivMod(y, 12)]) ? 0x01 : 0x02;
+		vpd->mem[y][f ] = (keycolor_tbl[DivMod(y, 12)]) ? 0x0001 : 0x0002;
+		vpd->mem[y][f2] = (keycolor_tbl[DivMod(y, 12)]) ? 0x0001 : 0x0002;
 	}
 }
 
@@ -197,7 +206,7 @@ void DrawLinesBack(VISUAL_PLAY* vpd){
 	// 背景色をセット
 	for (int j = 1; j < 7; j++) {
 		for (int i = 0; i < 12; i++) {
-			vpd->mem[i + j*12][f] = (keycolor_tbl[i]) ? 0x11 : 0x10;
+			vpd->mem[i + j*12][f] = (keycolor_tbl[i]) ? 0x0011 : 0x0010;
 		}
 	}
 }
@@ -239,20 +248,17 @@ void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 }
 
 
-u16 ttest[480]; // オレンジで確認
 void ConvertMem_Scrolling(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 	// 移動中でなければ帰る
 	if (!vpd->height_spd)
 		return;
 
-	memset(ttest, 0x01, 480);
-
 	int y, y2;
 	for (int j = 0; j < abs(vpd->height_spd); j++) {
-		y  = DivMod(800 - vpd->height - j, SCREEN_HEIGHT); 
+		y  = DivMod(801 - vpd->height + j, SCREEN_HEIGHT); 
 		y2 = y + 160;
-		dmaCopy(ttest/*(u16*)vpd->mem[vpd->height + OBJ_LEFT9 * 16]*/, (u16*)gmd->vram[y ], 480);
-		dmaCopy(ttest/*(u16*)vpd->mem[vpd->height + OBJ_LEFT9 * 16]*/, (u16*)gmd->vram[y2], 480);
+		dmaCopy((u16*)vpd->testArray,/*&vpd->mem[(vpd->height + j) >> 3][vpd->frame]*/
+				(u16*)gmd->vram[y ], 480);
 	}
 }
 

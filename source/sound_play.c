@@ -73,7 +73,7 @@ static void ChangeSnd(SOUND_PLAY* d, BUTTON_INFO* btn) {
 
 	// オクターブ 補正
 	switch (d->octave) {
-		case  6:	d->octave  =  5; break;
+		case  5:	d->octave  =  4; break;
 		case -2:	d->octave  = -1; break;
 	}
 
