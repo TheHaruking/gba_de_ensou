@@ -22,6 +22,7 @@ extern void objReg(OBJATTR** attrp, OBJ_UTILS* oud, int n);
 extern void objMove(OBJATTR* attr, int x, int y);
 extern void obj4draw(OBJATTR* attr, int chr, int x, int y);
 extern void obj2draw(OBJATTR* attr, int chr, int x, int y);
+extern void objdraw(OBJATTR* attr, int chr, int x, int y);
 extern void obj2pal(OBJATTR* attr, int pal);
 extern void obj2chr(OBJATTR* attr, int chr);
 extern void obj4pal(OBJATTR* attr, int pal);

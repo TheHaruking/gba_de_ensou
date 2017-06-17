@@ -88,6 +88,12 @@ void obj4pal(OBJATTR* attr, int pal) {
 	attr[3].attr2 |= OBJ_PALETTE(pal);
 }
 
+void objdraw(OBJATTR* attr, int chr, int x, int y) {
+	attr[0].attr0 = OBJ_Y(y ) | OBJ_16_COLOR;
+	attr[0].attr1 = OBJ_X(x ) ;
+	attr[0].attr2 = OBJ_CHAR(chr);
+}
+
 void objInit(OBJATTR* attr, int chr, int col256) {
 	col256 &= 1;
 	attr->attr0 = 0 | (col256 ? ATTR0_COLOR_256 : 0);

@@ -34,6 +34,7 @@ typedef struct _VISUAL_PLAY_ {
 	int				mode_flag;	// "演奏モード" or "楽譜モード"
 	OBJATTR*		icon_key;		// 左のアイコン
 	OBJATTR*		icon_ab;		// AB押したときのアイコン
+	OBJATTR*		icon_mes;		// 下段の文字
 
 	// test用ポインタ
 	u8* testArray;
@@ -53,7 +54,7 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	x = SCREEN_WIDTH * 2;
 	y = 128;
 	vpd->mem = (u8**)malloc_arr((void**)vpd->mem,  sizeof(u8), y, x);
-
+	// test
 	vpd->testArray = (u8*)malloc(sizeof(u8) * 480);
 }
 
@@ -61,13 +62,12 @@ void FinishVisualPlay(VISUAL_PLAY* vpd){
 }
 
 void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
-	int n_key/*, n_ab*/;
 	int pos_bottom;
 
 	// グラフィックデータをメモリへコピー
 	// 1. BG専用領域,  2. 共用領域,  3. OBJ専用領域
-	dmaCopy((u16*)chr003Tiles, CHAR_BASE_BLOCK(3),  chr003TilesLen);
-	dmaCopy((u16*)chr003Tiles, OBJ_BASE_ADR,		chr003TilesLen); // BGでもCHAR_BASE_BLOCK(3)なら512以降で使用可
+//	dmaCopy((u16*)chr003Tiles, CHAR_BASE_BLOCK(3),  chr003TilesLen);
+//	dmaCopy((u16*)chr003Tiles, OBJ_BASE_ADR,		chr003TilesLen); // BGでもCHAR_BASE_BLOCK(3)なら512以降で使用可
 	dmaCopy((u16*)chr003Tiles, BITMAP_OBJ_BASE_ADR, chr003TilesLen);
 //	dmaCopy((u16*)chr003Pal,   BG_COLORS, 		chr003PalLen);
 	dmaCopy((u16*)chr003Pal,   OBJ_COLORS,		chr003PalLen);
@@ -81,10 +81,12 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 
 
 	// obj_utilsが確保したメモリのアドレスをこちらに登録
-	n_key	= 4 * OBJ_LEFT9;		// 1アイコン4つぶん 
-//	n_ab	= 2 * OBJ_LEFT9 * 2;	// 1アイコン2つぶん * AとB (未使用)
+	// key : 1アイコン4つ * 9 = 36 
+	// ab  : 1アイコン2つ * 9 * AとB = 36
+	// mes : 16文字 * 2;
 	objReg(&vpd->icon_key, oud, 0);
-	objReg(&vpd->icon_ab,  oud, n_key);
+	objReg(&vpd->icon_ab,  oud, 48);
+	objReg(&vpd->icon_mes, oud, 96);
 
 	// OBJ に データセット
 	// ※下から順に置いていく。
@@ -99,6 +101,11 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 	// 画面左 ９箱
 	for (int i = 0; i < OBJ_LEFT9; i++) {
 		obj4draw(&vpd->icon_key[i*4], 512 + 0x86, 0, pos_bottom - i*16);
+	}
+	// 画面下 ３０文字
+	for (int i = 0; i < 16; i++) {
+		objdraw(&vpd->icon_mes[i     ], 512 + 0xB0, i * 8, 144);
+		objdraw(&vpd->icon_mes[i + 16], 512 + 0xB1, i * 8, 152);
 	}
 
 	// 画面←アイコン領域に、描画されないように
@@ -145,8 +152,8 @@ void LightObjAB(OBJATTR* attr, int num, int enable){
 	}
 	// 画面左 ９箱
 	for (int i = 0; i < OBJ_LEFT9; i++) {
-		obj2chr(&attr[i*4  ], 512);
-		obj2chr(&attr[i*4+2], 512);
+		obj2chr(&attr[i*4    ], 512);
+		obj2chr(&attr[i*4 + 2], 512);
 	}
 	// 入力のあった方向を光らせる
 	if (num >= 0) {
@@ -174,13 +181,14 @@ void MoveLine(VISUAL_PLAY* vpd) {
 void MoveHeight(VISUAL_PLAY* vpd, int ofs) {
 	int dst  = (ofs + 12) * 8; 		// 最低-12になるので、補正
 	int diff = dst - vpd->height;	
+
 	// ヌルっとスクロール
 	if (abs(diff) > 1) {
-		vpd->height_spd = (diff >> 3) + SGN(diff);
-		vpd->height += vpd->height_spd;
+		vpd->height_spd =  (diff >> 3) + SGN(diff);
+		vpd->height 	+= vpd->height_spd;
 	} else {
 		vpd->height_spd = 0;
-		vpd->height  = dst;
+		vpd->height  	= dst;
 	}
 	// 表示位置確定
 	vpd->height_view = 160 - DivMod(vpd->height - 16, 160) + 1; // 下の空白が16
@@ -198,10 +206,10 @@ void DrawLines(VISUAL_PLAY* vpd, unsigned int y, int flag){
 
 	int f  = vpd->frame;
 	int f2 = f + SCREEN_WIDTH;
-	y += 12; // 補正
+	y += 12; // note(-12 ~ 83), mem(0 ~ 127) 間の補正
 
 	// 音程に色をセット
-	if (flag){
+	if (flag) {
 		vpd->mem[y][f ] = (keycolor_tbl[DivMod(y, 12)]) ? 0x0001 : 0x0002;
 		vpd->mem[y][f2] = (keycolor_tbl[DivMod(y, 12)]) ? 0x0001 : 0x0002;
 	}
@@ -210,10 +218,12 @@ void DrawLines(VISUAL_PLAY* vpd, unsigned int y, int flag){
 // 音の高さデータを色に変換(背景)
 void DrawLinesBack(VISUAL_PLAY* vpd){
 	int f = vpd->frame;
+	int f2 = f + SCREEN_WIDTH;
 	// 背景色をセット
 	for (int j = 1; j < 7; j++) {
 		for (int i = 0; i < 12; i++) {
-			vpd->mem[i + j*12][f] = (keycolor_tbl[i]) ? 0x0011 : 0x0010;
+			vpd->mem[i + j*12][f ] = (keycolor_tbl[i]) ? 0x0011 : 0x0010; // 黒鍵 : 白鍵
+			vpd->mem[i + j*12][f2] = (keycolor_tbl[i]) ? 0x0011 : 0x0010; // 黒鍵 : 白鍵
 		}
 	}
 }
@@ -221,20 +231,18 @@ void DrawLinesBack(VISUAL_PLAY* vpd){
 // mem を、実際に描画する際の絵に変換
 void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 	int f  = vpd->frame;
-	int f2 = f + SCREEN_WIDTH;
 	// 棒出現位置を右に15 ずらす
 	int m  = DivMod(f + 15, 240);
-	int m2 = m + SCREEN_WIDTH;
+	int m2 = m + 240;
 
 	// セットした色を、実際の描画サイズ・向きに変換
 	// i >> 3 して、棒を縦8 にしている
 	// m は +15 されていて、棒出現位置を右に15 ずらす役割
 	int bottom_line = (ofs + 12) << 3;
 	int y_ofs, y_ofs2, i_div8;
-	for (int i = 0; i < SCREEN_HEIGHT; i++){
-	//	y_ofs  = DivMod(bottom_line - i + vpd->height_view, 160);
-		y_ofs  = SCREEN_HEIGHT - DivMod(bottom_line + i, SCREEN_HEIGHT);
-		y_ofs2 = y_ofs + SCREEN_HEIGHT;
+	for (int i = 0; i < 160; i++){
+		y_ofs  = 160 - DivMod(bottom_line + i, 160);
+		y_ofs2 = y_ofs + 160;
 		i_div8 = (ofs + 12) + (i >> 3);
 		gmd->vram[y_ofs ][m ] = vpd->mem[i_div8][f]; 
 		gmd->vram[y_ofs ][m2] = vpd->mem[i_div8][f]; 
@@ -243,18 +251,29 @@ void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 	}
 }
 
-
+// スクロールした分描画
 void ConvertMem_Scrolling(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 	// 移動中でなければ帰る
 	if (!vpd->height_spd)
 		return;
 
 	int y, y2;
-	for (int j = 0; j < abs(vpd->height_spd); j++) {
-		y  = DivMod(801 - vpd->height + j, SCREEN_HEIGHT); 
-		y2 = y + 160;
-		dmaCopy((u16*)vpd->testArray,/*&vpd->mem[(vpd->height + j) >> 3][vpd->frame]*/
-				(u16*)gmd->vram[y ], 480);
+	int height_ofs = (vpd->height_spd > 0) ? 160 : 0;
+	u8* src,* dst11,* dst12,* dst21,* dst22;
+
+	// 
+	for (int i = 0; i < abs(vpd->height_spd); i++) {
+		y     = DivMod(801 - vpd->height + i, 160); 
+		y2    = y + 160;
+		src   = &vpd->mem[((vpd->height + height_ofs - 1 - i) >> 3)][0];
+		dst11 = &gmd->vram[y ][0  ];
+		dst12 = &gmd->vram[y ][240];
+		dst21 = &gmd->vram[y2][0  ];
+		dst22 = &gmd->vram[y2][240];
+		dmaCopy( src, dst11, 240);
+		dmaCopy( src, dst12, 240);
+		dmaCopy( src, dst21, 240);
+		dmaCopy( src, dst22, 240);
 	}
 }
 
