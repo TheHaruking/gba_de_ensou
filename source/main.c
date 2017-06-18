@@ -91,11 +91,12 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 	dmaCopy((u16*)chr003Pal,   OBJ_COLORS,		chr003PalLen);
 
 	// BGパレットに色を設定 (とりあえず)
-	BG_COLORS[0x00]  = RGB5( 0, 0, 0);
-	BG_COLORS[0x01]  = RGB5(31,15, 0);
-	BG_COLORS[0x02]  = RGB5(31,21, 8);
-	BG_COLORS[0x10]  = RGB5(13,13,13);
-	BG_COLORS[0x11]  = RGB5( 7, 7, 7);
+	BG_COLORS[0x00] = RGB5( 0, 0, 0);
+	BG_COLORS[0x01] = RGB5(31,15, 0);
+	BG_COLORS[0x02] = RGB5(31,21, 8);
+	BG_COLORS[0x10] = RGB5(13,13,13);
+	BG_COLORS[0x11] = RGB5( 7, 7, 7);
+	BG_COLORS[0x12] = RGB5(31,31,31);
 
 
 	// obj_utilsが確保したメモリのアドレスをこちらに登録
@@ -112,7 +113,7 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 	for (int i = 0; i < BOXES_9; i++) {
 		obj2draw(&vpd->icon_ab[i*4    ], 512 + 0x03, 0, pos_bottom - i*16);
 		obj2draw(&vpd->icon_ab[i*4 + 2], 512 + 0x03, 0, pos_bottom - i*16 + 8);
-		obj2pal(&vpd->icon_ab[i*4    ], 2); // 緑
+		obj2pal(&vpd->icon_ab[i*4    ], 6); // 白
 		obj2pal(&vpd->icon_ab[i*4 + 2], 5); // 灰
 	}
 
@@ -301,7 +302,7 @@ void ConvertMem_Scrolling(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 	u8* src,* dst11,* dst12,* dst21,* dst22;
 
 	// 移動分の描画
-	for (int i = 0; abs(i) <= abs(vpd->height_spd); i += sgn) {
+	for (int i = height_ofs_y; abs(i) <= abs(vpd->height_spd); i += sgn) {
 		// src : 書き込み元の位置,		y : 書き込み先の位置
 		src   = &vpd->mem[((vpd->height + height_ofs_src - i) >> 3)][0];
 		y     = DivMod(959 - vpd->height - height_ofs_y + i, 160); 
