@@ -108,9 +108,9 @@ static void ChangeNote(SOUND_PLAY* d, BUTTON_INFO* btn) {
 	}
 
 	// 音程
-	if (   (halIsAB(btn)      && halIsKey_hold(btn))
+	if (   (halIsAB(btn))
 		|| (halIsAB_hold(btn) && halIsKey(btn)) 
-		|| (halIsAB_diff(btn) && halIsAB_hold(btn) && halIsKey_hold(btn)) ) 
+		|| (halIsAB_diff(btn) && halIsAB_hold(btn)) ) 
 	{
 		// どのボタンで鳴らしているかを記憶しておく。
 		if (halIsAB(btn)) {
@@ -119,21 +119,25 @@ static void ChangeNote(SOUND_PLAY* d, BUTTON_INFO* btn) {
 		if (halIsAB_rrse(btn)) {
 			d->ab_sounding = (halIsAB_rrse(btn) & BTN_B) ? 1 : 0;
 		}
+		// どの方向で鳴らしているかを記憶しておく。
+		if (halIsKey_hold(btn)) {
+			d->vector_keep = d->vector;
+		}
 
 		// 音程計算
-		d->note18 = (d->vector * 2) + d->ab_sounding;
+		d->note18 = (d->vector_keep * 2) + d->ab_sounding;
 		d->note   = d->ofs + d->note18;	
 	}
 }
 
 // メロディ！
 static void MelodyStart(SOUND_PLAY* d, BUTTON_INFO* btn){
-	// 1. 十字キーを押しつつ、AかBを押した瞬間
+	// 1. AかBを押した瞬間
 	// 2. AかBを押しつつ、十字キーを動かした瞬間
 	// 3. AとBの片方離したが、一方が残っている場合 (十字キーを押しつつ)
-	if (   (halIsAB(btn)      && halIsKey_hold(btn))
+	if (   (halIsAB(btn))
 		|| (halIsAB_hold(btn) && halIsKey(btn)) 
-		|| (halIsAB_rrse(btn) && halIsAB_hold(btn) && halIsKey_hold(btn)) ) 
+		|| (halIsAB_rrse(btn) && halIsAB_hold(btn)) ) 
 	{
 		int swp_total, note_total, snd_total;
 		int snd_duty_fix, snd_time_fix, snd_amp_fix, snd_vol_fix;

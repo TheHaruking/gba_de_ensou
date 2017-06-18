@@ -11,14 +11,26 @@
 #include "graphic_mode4.h"
 #include "obj_utils.h"
 
-
 // 演奏を楽しむ "PLAYモード"
 // 右から流れてくる音符の演奏に挑戦する "GAMEモード"
 // ... の予定
 #define MODE_PLAY	0
 #define MODE_GAME	1
-#define OBJ_LEFT9	9
+#define BOXES_9		9
 #define OFS2MEM(n)	(n + 14)
+
+// 映像用データ
+typedef struct _VISUAL_PLAY_ {
+	int			    frame;			// スクロール用カウンタ
+	int				height;			// 高さ
+	int				height_view;	// 表示中の高さ
+	int				height_spd; 	// 移動中の速さ
+	unsigned char** mem;			// 色保存
+	int				mode_flag;		// "演奏モード" or "楽譜モード"
+	OBJATTR*		icon_key;		// 左のアイコン
+	OBJATTR*		icon_ab;		// AB押したときのアイコン
+	OBJATTR*		icon_mes;		// 下段の文字
+} VISUAL_PLAY, *PVISUAL_PLAY;
 
 // 黒鍵を1に。背景描画に使用
 const int keycolor_tbl[12] = {
@@ -49,26 +61,13 @@ const char word_tbl_oct[8][2] = {
 	{'0', '3'}, {'0', '4'}, {'0', '5'}, {'0', '6'},
 };
 
-// 映像用データ
-typedef struct _VISUAL_PLAY_ {
-	int			    frame;		// スクロール用カウンタ
-	int				height;		// 高さ
-	int				height_view;		// 表示中の高さ
-	int				height_spd; // 移動中の速さ
-	unsigned char** mem;		// 色保存
-	int				mode_flag;	// "演奏モード" or "楽譜モード"
-	OBJATTR*		icon_key;		// 左のアイコン
-	OBJATTR*		icon_ab;		// AB押したときのアイコン
-	OBJATTR*		icon_mes;		// 下段の文字
-} VISUAL_PLAY, *PVISUAL_PLAY;
-
 // 初期化
-void InitVisualPlay(VISUAL_PLAY* vpd){
+void InitVisualPlay(VISUAL_PLAY* vpd, int ofs){
 	int x, y;	// 確保するメモリの横と縦
 
 	// メモリ初期化
 	vpd->frame  = 0;
-	vpd->height = 16;
+	vpd->height = (OFS2MEM(ofs)) * 8;
 	vpd->mode_flag = MODE_PLAY;
 
 	// 配列メモリ確保
@@ -78,18 +77,17 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	vpd->mem = (u8**)malloc_arr((void**)vpd->mem,  sizeof(u8), y, x);
 }
 
+// 終了処理
 void FinishVisualPlay(VISUAL_PLAY* vpd){
 }
 
+// 初期化(グラフィック関連)
 void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 	int pos_bottom;
 
 	// グラフィックデータをメモリへコピー
-	// 1. BG専用領域,  2. 共用領域,  3. OBJ専用領域
-//	dmaCopy((u16*)chr003Tiles, CHAR_BASE_BLOCK(3),  chr003TilesLen);
-//	dmaCopy((u16*)chr003Tiles, OBJ_BASE_ADR,		chr003TilesLen); // BGでもCHAR_BASE_BLOCK(3)なら512以降で使用可
 	dmaCopy((u16*)chr003Tiles, BITMAP_OBJ_BASE_ADR, chr003TilesLen);
-//	dmaCopy((u16*)chr003Pal,   BG_COLORS, 		chr003PalLen);
+	//	dmaCopy((u16*)chr003Pal,   BG_COLORS, 		chr003PalLen);
 	dmaCopy((u16*)chr003Pal,   OBJ_COLORS,		chr003PalLen);
 
 	// BGパレットに色を設定 (とりあえず)
@@ -110,16 +108,16 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 
 	// OBJ に データセット
 	// ※下から順に置いていく。
-	pos_bottom = 16 * (OBJ_LEFT9 - 1); // Y : 128
-	for (int i = 0; i < OBJ_LEFT9; i++) {
+	pos_bottom = 16 * (BOXES_9 - 1); // Y : 128
+	for (int i = 0; i < BOXES_9; i++) {
 		obj2draw(&vpd->icon_ab[i*4    ], 512 + 0x03, 0, pos_bottom - i*16);
-		obj2draw(&vpd->icon_ab[i*4 + 2], 512 + 0x03, 0, pos_bottom - i*16+8);
+		obj2draw(&vpd->icon_ab[i*4 + 2], 512 + 0x03, 0, pos_bottom - i*16 + 8);
 		obj2pal(&vpd->icon_ab[i*4    ], 2); // 緑
 		obj2pal(&vpd->icon_ab[i*4 + 2], 5); // 灰
 	}
 
 	// 画面左 9箱
-	for (int i = 0; i < OBJ_LEFT9; i++) {
+	for (int i = 0; i < BOXES_9; i++) {
 		obj4draw(&vpd->icon_key[i*4], 512 + 0x86, 0, pos_bottom - i*16);
 	}
 	// 画面下 16文字 2行
@@ -148,23 +146,23 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 }
 
 // 十字キー入力で光らせる
-void LightObj(OBJATTR* attr, int num, int enable){
+void LightObj(VISUAL_PLAY* vpd, int num, int enable){
 	// 十字キー入力無しの場合、光らせない
 	if (!enable) {
 		num = -1;
 	}
 	// 画面左 ９箱
-	for (int i = 0; i < OBJ_LEFT9; i++) {
-		obj4pal(&attr[i*4], 0x04);
+	for (int i = 0; i < BOXES_9; i++) {
+		obj4pal(&vpd->icon_key[i*4], 0x04);
 	}
 	// 入力のあった方向を光らせる
 	if (num >= 0) {
-		obj4pal(&attr[num*4], 0x00);
+		obj4pal(&vpd->icon_key[num*4], 0x00);
 	}
 }
 
 // ABボタン入力で光らせる
-void LightObjAB(OBJATTR* attr, int num, int enable){
+void LightObjAB(VISUAL_PLAY* vpd, int num, int enable){
 	int n;
 	// abキー入力無しの場合、光らせない
 	switch (enable) {
@@ -173,13 +171,13 @@ void LightObjAB(OBJATTR* attr, int num, int enable){
 		default:		n = 0;	num = -1;	break;
 	}
 	// 画面左 ９箱
-	for (int i = 0; i < OBJ_LEFT9; i++) {
-		obj2chr(&attr[i*4    ], 512);
-		obj2chr(&attr[i*4 + 2], 512);
+	for (int i = 0; i < BOXES_9; i++) {
+		obj2chr(&vpd->icon_ab[i*4    ], 512);
+		obj2chr(&vpd->icon_ab[i*4 + 2], 512);
 	}
 	// 入力のあった方向を光らせる
 	if (num >= 0) {
-		obj2chr(&attr[num*4 + n*2], 512 + 0x03);
+		obj2chr(&vpd->icon_ab[num*4 + n*2], 512 + 0x03);
 	}
 }
 
@@ -247,8 +245,8 @@ void DrawLines(VISUAL_PLAY* vpd, unsigned int y, int flag){
 
 	// 音程に色をセット
 	if (flag) {
-		vpd->mem[y][f ] = (keycolor_tbl[DivMod(y, 12)]) ? 0x0001 : 0x0002;
-		vpd->mem[y][f2] = (keycolor_tbl[DivMod(y, 12)]) ? 0x0001 : 0x0002;
+		vpd->mem[y][f ] = (keycolor_tbl[DivMod(y - 2, 12)]) ? 0x0001 : 0x0002;
+		vpd->mem[y][f2] = (keycolor_tbl[DivMod(y - 2, 12)]) ? 0x0001 : 0x0002;
 	}
 }
 
@@ -340,13 +338,16 @@ int main(void) {
 	InitMode4(&gm_data);
 	InitObj(&ou_data);
 
+	// 初期音設定(上書き)
+	sp_data.octave = 2;
+	sp_data.key    = 4;
+	sp_data.snd_duty = 1;
+	SoundPlay(&sp_data, &b);
+
 	// Init Video
-	InitVisualPlay(&vp_data);
+	InitVisualPlay(&vp_data, sp_data.ofs);
 	InitGraphic(&vp_data, &ou_data);
 
-	// Test
-	sp_data.octave = -1;
-	sp_data.key    = 0;
 
 	// Sound Init
 	REG_SOUNDCNT_X = 0x80;		// turn on sound circuit
@@ -368,8 +369,8 @@ int main(void) {
 		DrawLines(&vp_data, sp_data.note, halIsAB_hold(&b));
 
 		// 左のアイコン類
-		LightObj(vp_data.icon_key,  sp_data.vector, halIsKey_hold(&b));
-		LightObjAB(vp_data.icon_ab, sp_data.vector, halIsAB_hold(&b));
+		LightObj(&vp_data,  sp_data.vector, halIsKey_hold(&b));
+		LightObjAB(&vp_data, sp_data.vector_keep, halIsAB_hold(&b));
 		UpdateMes(&vp_data, sp_data.key, sp_data.octave);
 
 		// 変換処理

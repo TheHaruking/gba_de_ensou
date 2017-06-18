@@ -12,6 +12,7 @@ typedef struct _SOUND_PLAY_ {
 	// 音高
 	int note;			// 最終音階
 	int vector;			// 入力値
+	int vector_keep;	// 入力値(十字キー無しで押したとき用)
 	int octave;			// オクターブ
 	int key;			// 調 (0 ～ 11)
 	int ab_sounding;	// a なら 1
