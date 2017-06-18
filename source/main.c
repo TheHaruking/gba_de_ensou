@@ -25,6 +25,13 @@ const int keycolor_tbl[12] = {
 	0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 
 };
 
+const char word_tbl[2][16] = {
+	/* おくたーぶ：ＸＸ    ↓：ＸＸ    */ /* 後に'↑'へと反転させる */
+	/* きー      ：ＸＸ    ↓：ＸＸ    */
+	{ 0xB4, 0xB7, 0xC0, 0x2D, 0xFC, ':', 0, 0, ' ', ' ', 0x97, ':', 0, 0, ' ', ' '},
+	{ 0xB6, 0x2D, 0x00, 0x00, 0x00, ':', 0, 0, ' ', ' ', 0x97, ':', 0, 0, ' ', ' '}, 
+};
+
 // 映像用データ
 typedef struct _VISUAL_PLAY_ {
 	int			    frame;		// スクロール用カウンタ
@@ -98,11 +105,14 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 	for (int i = 0; i < OBJ_LEFT9; i++) {
 		obj4draw(&vpd->icon_key[i*4], 512 + 0x86, 0, pos_bottom - i*16);
 	}
-	// 画面下 15文字 2行
-	for (int i = 0; i < 16; i++) {
-		objdraw(&vpd->icon_mes[i     ], 512 + 0xB0, i*8, 144);
-		objdraw(&vpd->icon_mes[i + 16], 512 + 0xB1, i*8, 152);
+	// 画面下 16文字 2行
+	for (int j = 0; j < 2; j++) {
+		for (int i = 0; i < 16; i++) {
+			objdraw(&vpd->icon_mes[j*16 + i], 512 + word_tbl[j][i], i*8, 144 + j*8);
+		}
 	}
+	// ここで1行目 "↓：ＸＸ" を "↑：ＸＸ" に反転
+	objattr(&vpd->icon_mes[10], 0, 1);
 
 	// 画面←アイコン領域(と、文字の部分) に、描画されないように
 	SetMode_add( WIN0_ENABLE | WIN1_ENABLE );
@@ -154,6 +164,11 @@ void LightObjAB(OBJATTR* attr, int num, int enable){
 	if (num >= 0) {
 		obj2chr(&attr[num*4 + n*2], 512 + 0x03);
 	}
+}
+
+// 下にメッセージを出力
+void DrawMes(OBJATTR* attr, int ofs, int octave) {
+
 }
 
 // スクロール用数値(frame)を計算
@@ -328,6 +343,7 @@ int main(void) {
 		// 左のアイコン類
 		LightObj(vp_data.icon_key,  sp_data.vector, halIsKey_hold(&b));
 		LightObjAB(vp_data.icon_ab, sp_data.vector, halIsAB_hold(&b));
+		DrawMes(vp_data.icon_mes, sp_data.key, sp_data.octave);
 
 		// 変換処理
 		ConvertMem(&vp_data, &gm_data, sp_data.ofs);

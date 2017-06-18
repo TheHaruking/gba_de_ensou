@@ -94,6 +94,17 @@ void objdraw(OBJATTR* attr, int chr, int x, int y) {
 	attr[0].attr2 = OBJ_CHAR(chr);
 }
 
+void objchr(OBJATTR* attr, int chr) {
+	attr[0].attr2 &= 0xFC00;
+	attr[0].attr2 |= OBJ_CHAR(chr);
+}
+
+void objattr(OBJATTR* attr, int h, int v) {
+	h &= 1; v &= 1;
+	attr[0].attr1 &= 0xCFFF;
+	attr[0].attr1 |= (h << 12) | (v << 13) ;
+}
+
 void objInit(OBJATTR* attr, int chr, int col256) {
 	col256 &= 1;
 	attr->attr0 = 0 | (col256 ? ATTR0_COLOR_256 : 0);
