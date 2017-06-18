@@ -87,7 +87,6 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 
 	// グラフィックデータをメモリへコピー
 	dmaCopy((u16*)chr003Tiles, BITMAP_OBJ_BASE_ADR, chr003TilesLen);
-	//	dmaCopy((u16*)chr003Pal,   BG_COLORS, 		chr003PalLen);
 	dmaCopy((u16*)chr003Pal,   OBJ_COLORS,		chr003PalLen);
 
 	// BGパレットに色を設定 (とりあえず)
@@ -111,10 +110,10 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 	// ※下から順に置いていく。
 	pos_bottom = 16 * (BOXES_9 - 1); // Y : 128
 	for (int i = 0; i < BOXES_9; i++) {
-		obj2draw(&vpd->icon_ab[i*4    ], 512 + 0x03, 0, pos_bottom - i*16);
-		obj2draw(&vpd->icon_ab[i*4 + 2], 512 + 0x03, 0, pos_bottom - i*16 + 8);
-		obj2pal(&vpd->icon_ab[i*4    ], 6); // 白
-		obj2pal(&vpd->icon_ab[i*4 + 2], 5); // 灰
+		obj2draw(&vpd->icon_ab[i*4    ], 512 + 0x01, 0, pos_bottom - i*16);
+		obj2draw(&vpd->icon_ab[i*4 + 2], 512 + 0x02, 0, pos_bottom - i*16 + 8);
+		obj2pal(&vpd->icon_ab[i*4    ], 0); // 白黒パレット
+		obj2pal(&vpd->icon_ab[i*4 + 2], 0);
 	}
 
 	// 画面左 9箱
@@ -164,21 +163,21 @@ void LightObj(VISUAL_PLAY* vpd, int num, int enable){
 
 // ABボタン入力で光らせる
 void LightObjAB(VISUAL_PLAY* vpd, int num, int enable){
-	int n;
-	// abキー入力無しの場合、光らせない
-	switch (enable) {
-		case BTN_A:		n = 0;	break;
-		case BTN_B:		n = 1;	break;
-		default:		n = 0;	num = -1;	break;
-	}
+	int a, b;
+	// フラグ設定
+	a = (enable & BTN_A) ? 1 : 0;
+	b = (enable & BTN_B) ? 1 : 0;
 	// 画面左 ９箱
 	for (int i = 0; i < BOXES_9; i++) {
 		obj2chr(&vpd->icon_ab[i*4    ], 512);
 		obj2chr(&vpd->icon_ab[i*4 + 2], 512);
 	}
 	// 入力のあった方向を光らせる
-	if (num >= 0) {
-		obj2chr(&vpd->icon_ab[num*4 + n*2], 512 + 0x03);
+	if (a) {
+		obj2chr(&vpd->icon_ab[num*4],     512 + 0x01);
+	}
+	if (b) {
+		obj2chr(&vpd->icon_ab[num*4 + 2], 512 + 0x02);
 	}
 }
 
