@@ -18,7 +18,7 @@
 #define MODE_PLAY	0
 #define MODE_GAME	1
 #define OBJ_LEFT9	9
-#define OFS2MEM(n)	(n + 12)
+#define OFS2MEM(n)	(n + 14)
 
 // 黒鍵を1に。背景描画に使用
 const int keycolor_tbl[12] = {
@@ -36,9 +36,6 @@ typedef struct _VISUAL_PLAY_ {
 	OBJATTR*		icon_key;		// 左のアイコン
 	OBJATTR*		icon_ab;		// AB押したときのアイコン
 	OBJATTR*		icon_mes;		// 下段の文字
-
-	// test用ポインタ
-	u8* testArray;
 } VISUAL_PLAY, *PVISUAL_PLAY;
 
 // 初期化
@@ -47,7 +44,7 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 
 	// メモリ初期化
 	vpd->frame  = 0;
-	vpd->height = 0;
+	vpd->height = 16;
 	vpd->mode_flag = MODE_PLAY;
 
 	// 配列メモリ確保
@@ -55,8 +52,6 @@ void InitVisualPlay(VISUAL_PLAY* vpd){
 	x = SCREEN_WIDTH * 2;
 	y = 128;
 	vpd->mem = (u8**)malloc_arr((void**)vpd->mem,  sizeof(u8), y, x);
-	// test
-	vpd->testArray = (u8*)malloc(sizeof(u8) * 480);
 }
 
 void FinishVisualPlay(VISUAL_PLAY* vpd){
@@ -99,17 +94,17 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 		obj2pal(&vpd->icon_ab[i*4 + 2], 5); // 灰
 	}
 
-	// 画面左 ９箱
+	// 画面左 9箱
 	for (int i = 0; i < OBJ_LEFT9; i++) {
 		obj4draw(&vpd->icon_key[i*4], 512 + 0x86, 0, pos_bottom - i*16);
 	}
-	// 画面下 ３０文字
+	// 画面下 15文字 2行
 	for (int i = 0; i < 16; i++) {
-		objdraw(&vpd->icon_mes[i     ], 512 + 0xB0, i * 8, 144);
-		objdraw(&vpd->icon_mes[i + 16], 512 + 0xB1, i * 8, 152);
+		objdraw(&vpd->icon_mes[i     ], 512 + 0xB0, i*8, 144);
+		objdraw(&vpd->icon_mes[i + 16], 512 + 0xB1, i*8, 152);
 	}
 
-	// 画面←アイコン領域に、描画されないように
+	// 画面←アイコン領域(と、文字の部分) に、描画されないように
 	SetMode_add( WIN0_ENABLE | WIN1_ENABLE );
 	REG_WININ	= WININ_0(OBJ_ENABLE) | WININ_1(OBJ_ENABLE);	// 内側 : OBJ
 	REG_WINOUT	= WINOUT(BG2_ENABLE);							// 外側 : メイン画面
@@ -117,17 +112,15 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 	SetWIN1(  0, 144, 240, 160);
 
 	// 真っ黒部分
-	for (int i = 0; i <= 11; i++) {
+	for (int i = 0; i <= 13; i++) {
 		memset(vpd->mem[i], 0x00, 480);
 	}
-	for (int i = 96; i <= 127; i++) {
-		memset(vpd->mem[i], 0x01, 480);
+	for (int i = 98; i <= 127; i++) {
+		memset(vpd->mem[i], 0x00, 480);
 	}
-
-	// test
-	memset(vpd->testArray, 0x01, 480);
 }
 
+// 十字キー入力で光らせる
 void LightObj(OBJATTR* attr, int num, int enable){
 	// 十字キー入力無しの場合、光らせない
 	if (!enable) {
@@ -143,6 +136,7 @@ void LightObj(OBJATTR* attr, int num, int enable){
 	}
 }
 
+// ABボタン入力で光らせる
 void LightObjAB(OBJATTR* attr, int num, int enable){
 	int n;
 	// abキー入力無しの場合、光らせない
@@ -178,12 +172,12 @@ void MoveLine(VISUAL_PLAY* vpd) {
 	}
 }
 
-// 途中
+// 上下方向のスクロール計算処理
 void MoveHeight(VISUAL_PLAY* vpd, int ofs) {
-	int dst  = (OFS2MEM(ofs)) * 8; 		// 最低-12になるので、補正
+	int dst  = (OFS2MEM(ofs)) * 8; 		// 最低-14になるので、補正
 	int diff = dst - vpd->height;	
 
-	// ヌルっとスクロール
+	// ÷8( >> 3)した数値分を引いて、ヌルっとスクロール
 	if (abs(diff) > 1) {
 		vpd->height_spd =  (diff >> 3) + SGN(diff);
 		vpd->height 	+= vpd->height_spd;
@@ -207,7 +201,7 @@ void DrawLines(VISUAL_PLAY* vpd, unsigned int y, int flag){
 
 	int f  = vpd->frame;
 	int f2 = f + SCREEN_WIDTH;
-	y += 12; // note(-12 ~ 83), mem(0 ~ 127) 間の補正
+	y = OFS2MEM(y); // note(-12 ~ 83), mem(2 ~ 97) 間の補正
 
 	// 音程に色をセット
 	if (flag) {
@@ -221,10 +215,10 @@ void DrawLinesBack(VISUAL_PLAY* vpd){
 	int f = vpd->frame;
 	int f2 = f + SCREEN_WIDTH;
 	// 背景色をセット
-	for (int j = 1; j < 7; j++) {
+	for (int j = 0; j < 6; j++) {
 		for (int i = 0; i < 12; i++) {
-			vpd->mem[i + j*12][f ] = (keycolor_tbl[i]) ? 0x0011 : 0x0010; // 黒鍵 : 白鍵
-			vpd->mem[i + j*12][f2] = (keycolor_tbl[i]) ? 0x0011 : 0x0010; // 黒鍵 : 白鍵
+			vpd->mem[OFS2MEM(i + j*12)][f ] = (keycolor_tbl[i]) ? 0x0011 : 0x0010; // 黒鍵 : 白鍵
+			vpd->mem[OFS2MEM(i + j*12)][f2] = (keycolor_tbl[i]) ? 0x0011 : 0x0010; // 黒鍵 : 白鍵
 		}
 	}
 }
@@ -245,7 +239,7 @@ void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 		// 下から描画
 		y_ofs  = 159 - DivMod(bottom_line + i, 160);
 		y_ofs2 = y_ofs + 160;
-		i_div8 = (OFS2MEM(ofs) - 2) + (i >> 3); // 実は "ofs = 0" のとき、mem[-2]にアクセスしてますが、WIN1で隠すのでそのまま。
+		i_div8 = (OFS2MEM(ofs) - 2) + (i >> 3);
 		gmd->vram[y_ofs ][m ] = vpd->mem[i_div8][f]; 
 		gmd->vram[y_ofs ][m2] = vpd->mem[i_div8][f]; 
 		gmd->vram[y_ofs2][m ] = vpd->mem[i_div8][f]; 
@@ -262,15 +256,15 @@ void ConvertMem_Scrolling(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 	int y, y2;
 	int sgn = SGN(vpd->height_spd);
 	// src : 書き込み元の位置,		y : 書き込み先の位置
-	int height_ofs_src = (sgn > 0) ? 144 : -16;
-	int height_ofs_y   = (sgn > 0) ? 0   : 0;
+	int height_ofs_src = (sgn > 0) ? 144 : -17;
+	int height_ofs_y   = (sgn > 0) ? 0   : -1;
 	u8* src,* dst11,* dst12,* dst21,* dst22;
 
 	// 移動分の描画
 	for (int i = 0; abs(i) <= abs(vpd->height_spd); i += sgn) {
 		// src : 書き込み元の位置,		y : 書き込み先の位置
 		src   = &vpd->mem[((vpd->height + height_ofs_src - i) >> 3)][0];
-		y     = DivMod(799 - vpd->height - height_ofs_y + i, 160); 
+		y     = DivMod(959 - vpd->height - height_ofs_y + i, 160); 
 		y2    = y + 160;
 		// 1行分(480ピクセル) 書き込み
 		// 書き込み元が240ピクセル分の情報しかないため、2回必要
