@@ -18,6 +18,7 @@
 #define MODE_PLAY	0
 #define MODE_GAME	1
 #define OBJ_LEFT9	9
+#define OFS2MEM(n)	(n + 12)
 
 // 黒鍵を1に。背景描画に使用
 const int keycolor_tbl[12] = {
@@ -112,8 +113,8 @@ void InitGraphic(VISUAL_PLAY* vpd, OBJ_UTILS* oud){
 	SetMode_add( WIN0_ENABLE | WIN1_ENABLE );
 	REG_WININ	= WININ_0(OBJ_ENABLE) | WININ_1(OBJ_ENABLE);	// 内側 : OBJ
 	REG_WINOUT	= WINOUT(BG2_ENABLE);							// 外側 : メイン画面
-	SetWIN0(0, 0, 16, 144);
-	SetWIN1(0, 144, 240, 160);
+	SetWIN0(  0,   0,  16, 144);
+	SetWIN1(  0, 144, 240, 160);
 
 	// 真っ黒部分
 	for (int i = 0; i <= 11; i++) {
@@ -179,7 +180,7 @@ void MoveLine(VISUAL_PLAY* vpd) {
 
 // 途中
 void MoveHeight(VISUAL_PLAY* vpd, int ofs) {
-	int dst  = (ofs + 12) * 8; 		// 最低-12になるので、補正
+	int dst  = (OFS2MEM(ofs)) * 8; 		// 最低-12になるので、補正
 	int diff = dst - vpd->height;	
 
 	// ヌルっとスクロール
@@ -191,7 +192,7 @@ void MoveHeight(VISUAL_PLAY* vpd, int ofs) {
 		vpd->height  	= dst;
 	}
 	// 表示位置確定
-	vpd->height_view = 160 - DivMod(vpd->height - 16, 160) + 1; // 下の空白が16
+	vpd->height_view = 160 - DivMod(vpd->height, 160);
 	dprintf("dist   : %d\n", vpd->height);
 	dprintf("diff   : %d\n", diff);
 	dprintf("height : %d\n", vpd->height);
@@ -238,12 +239,13 @@ void ConvertMem(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 	// セットした色を、実際の描画サイズ・向きに変換
 	// i >> 3 して、棒を縦8 にしている
 	// m は +15 されていて、棒出現位置を右に15 ずらす役割
-	int bottom_line = (ofs + 12) << 3;
+	int bottom_line = (OFS2MEM(ofs)) << 3;
 	int y_ofs, y_ofs2, i_div8;
 	for (int i = 0; i < 160; i++){
-		y_ofs  = 160 - DivMod(bottom_line + i, 160);
+		// 下から描画
+		y_ofs  = 159 - DivMod(bottom_line + i, 160);
 		y_ofs2 = y_ofs + 160;
-		i_div8 = (ofs + 12) + (i >> 3);
+		i_div8 = (OFS2MEM(ofs) - 2) + (i >> 3); // 実は "ofs = 0" のとき、mem[-2]にアクセスしてますが、WIN1で隠すのでそのまま。
 		gmd->vram[y_ofs ][m ] = vpd->mem[i_div8][f]; 
 		gmd->vram[y_ofs ][m2] = vpd->mem[i_div8][f]; 
 		gmd->vram[y_ofs2][m ] = vpd->mem[i_div8][f]; 
@@ -258,22 +260,24 @@ void ConvertMem_Scrolling(VISUAL_PLAY* vpd, GRAPHIC_MODE4* gmd, int ofs){
 		return;
 
 	int y, y2;
-	int height_ofs = (vpd->height_spd > 0) ? 160 : 0;
+	int sgn = SGN(vpd->height_spd);
+	// src : 書き込み元の位置,		y : 書き込み先の位置
+	int height_ofs_src = (sgn > 0) ? 144 : -16;
+	int height_ofs_y   = (sgn > 0) ? 0   : 0;
 	u8* src,* dst11,* dst12,* dst21,* dst22;
 
-	// 
-	for (int i = 0; i < abs(vpd->height_spd); i++) {
-		y     = DivMod(801 - vpd->height + i, 160); 
+	// 移動分の描画
+	for (int i = 0; abs(i) <= abs(vpd->height_spd); i += sgn) {
+		// src : 書き込み元の位置,		y : 書き込み先の位置
+		src   = &vpd->mem[((vpd->height + height_ofs_src - i) >> 3)][0];
+		y     = DivMod(799 - vpd->height - height_ofs_y + i, 160); 
 		y2    = y + 160;
-		src   = &vpd->mem[((vpd->height + height_ofs - 1 - i) >> 3)][0];
-		dst11 = &gmd->vram[y ][0  ];
-		dst12 = &gmd->vram[y ][240];
-		dst21 = &gmd->vram[y2][0  ];
-		dst22 = &gmd->vram[y2][240];
-		dmaCopy( src, dst11, 240);
-		dmaCopy( src, dst12, 240);
-		dmaCopy( src, dst21, 240);
-		dmaCopy( src, dst22, 240);
+		// 1行分(480ピクセル) 書き込み
+		// 書き込み元が240ピクセル分の情報しかないため、2回必要
+		dst11 = &gmd->vram[y ][0  ];	dst12 = &gmd->vram[y ][240];
+		dst21 = &gmd->vram[y2][0  ];	dst22 = &gmd->vram[y2][240];
+		dmaCopy( src, dst11, 240);		dmaCopy( src, dst12, 240);
+		dmaCopy( src, dst21, 240);		dmaCopy( src, dst22, 240);
 	}
 }
 
