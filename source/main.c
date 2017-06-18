@@ -32,6 +32,23 @@ const char word_tbl[2][16] = {
 	{ 0xB6, 0x2D, 0x00, 0x00, 0x00, ':', 0, 0, ' ', ' ', 0x97, ':', 0, 0, ' ', ' '}, 
 };
 
+const char word_tbl_note[12][2] = {
+	{0xF4, ' '}, {0xF4, '#'}, {0xD8, ' '}, {0xD8, '#'}, 
+	{0xD1, ' '}, {0xCD, ' '}, {0xCD, '#'}, {0xBE, ' '}, 
+	{0xBE, '#'}, {0xD5, ' '}, {0xD5, '#'}, {0xBB, ' '}, 
+};
+
+const char word_tbl_key[12][2] = {
+	{'0', '0'}, {'0', '1'}, {'0', '2'}, {'0', '3'}, 
+	{'0', '4'}, {'0', '5'}, {'0', '6'}, {'0', '7'}, 
+	{'0', '8'}, {'0', '9'}, {'1', '0'}, {'1', '1'}, 
+};
+
+const char word_tbl_oct[8][2] = {
+	{'-', '1'}, {'0', '0'}, {'0', '1'}, {'0', '2'},
+	{'0', '3'}, {'0', '4'}, {'0', '5'}, {'0', '6'},
+};
+
 // 映像用データ
 typedef struct _VISUAL_PLAY_ {
 	int			    frame;		// スクロール用カウンタ
@@ -167,8 +184,18 @@ void LightObjAB(OBJATTR* attr, int num, int enable){
 }
 
 // 下にメッセージを出力
-void DrawMes(OBJATTR* attr, int ofs, int octave) {
-
+void UpdateMes(VISUAL_PLAY* vpd, int key, int oct) {
+	/* おくたーぶ：ＸＸ    ↑：ＸＸ    */
+	/* きー      ：ＸＸ    ↓：ＸＸ    */
+	int max = DivMod(key + 5, 12);	// 最高音。key:0 のとき へ(ふぁ)   
+	int min = DivMod(key, 12);		// 最低音。key:4 のとき ど
+	oct += 1; // 補正(oct : -1 ~ 6, word_tbl_oct : 0 ~ 7)
+	for (int i = 0 ; i < 2; i++) {
+		objchr(&vpd->icon_mes[12 + i], 512 + word_tbl_note[max][i]);
+		objchr(&vpd->icon_mes[28 + i], 512 + word_tbl_note[min][i]);
+		objchr(&vpd->icon_mes[6  + i], 512 + word_tbl_oct[oct][i]);
+		objchr(&vpd->icon_mes[22 + i], 512 + word_tbl_key[key][i]);
+	}
 }
 
 // スクロール用数値(frame)を計算
@@ -230,7 +257,7 @@ void DrawLinesBack(VISUAL_PLAY* vpd){
 	int f = vpd->frame;
 	int f2 = f + SCREEN_WIDTH;
 	// 背景色をセット
-	for (int j = 0; j < 6; j++) {
+	for (int j = 0; j < 8; j++) {
 		for (int i = 0; i < 12; i++) {
 			vpd->mem[OFS2MEM(i + j*12)][f ] = (keycolor_tbl[i]) ? 0x0011 : 0x0010; // 黒鍵 : 白鍵
 			vpd->mem[OFS2MEM(i + j*12)][f2] = (keycolor_tbl[i]) ? 0x0011 : 0x0010; // 黒鍵 : 白鍵
@@ -343,7 +370,7 @@ int main(void) {
 		// 左のアイコン類
 		LightObj(vp_data.icon_key,  sp_data.vector, halIsKey_hold(&b));
 		LightObjAB(vp_data.icon_ab, sp_data.vector, halIsAB_hold(&b));
-		DrawMes(vp_data.icon_mes, sp_data.key, sp_data.octave);
+		UpdateMes(&vp_data, sp_data.key, sp_data.octave);
 
 		// 変換処理
 		ConvertMem(&vp_data, &gm_data, sp_data.ofs);
@@ -355,6 +382,7 @@ int main(void) {
 		FlushSprite(&ou_data);
 	}
 
+	// メモリ開放
 	FinishMode4(&gm_data);
 	FinishObj(&ou_data);
 }
